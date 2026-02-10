@@ -1,0 +1,40 @@
+{
+  "name": "techtrek-analytics",
+  "version": "1.0.0",
+  "description": "Got it 👍 I’ve **removed all non-essential content** and distilled everything into a **clean project plan with clear TODO milestones**, focused only on **TechPulse Analytics** and the **Next_Bharat_SKILLS requirements**.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "inspect-data": "node src/scripts/inspect-data.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mukul-raii/techtrek-Analytics.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mukul-raii/techtrek-Analytics/issues"
+  },
+  "homepage": "https://github.com/Mukul-raii/techtrek-Analytics#readme",
+  "dependencies": {
+    "@azure/cosmos": "^4.9.1",
+    "@azure/search-documents": "^12.2.0",
+    "axios": "^1.13.5",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
+    "mssql": "^12.2.0",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
