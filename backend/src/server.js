@@ -68,27 +68,38 @@ async function startServer() {
   }
 }
 
-const server = startServer();
+// For serverless (Vercel), export the app directly
+if (process.env.VERCEL) {
+  // Initialize services asynchronously but don't wait
+  startServer().catch((err) => {
+    logger.error("Failed to initialize services:", err);
+  });
+  // Export app for serverless
+  module.exports = app;
+} else {
+  // For local development, start the server normally
+  const server = startServer();
 
-process.on("unhandledRejection", (err) => {
-  logger.error("UNHANDLED REJECTION! 💥 Shutting down...");
-  logger.error(err.name, err.message);
-  if (server) {
-    server.then((s) => s.close(() => process.exit(1)));
-  } else {
-    process.exit(1);
-  }
-});
+  process.on("unhandledRejection", (err) => {
+    logger.error("UNHANDLED REJECTION! 💥 Shutting down...");
+    logger.error(err.name, err.message);
+    if (server) {
+      server.then((s) => s.close(() => process.exit(1)));
+    } else {
+      process.exit(1);
+    }
+  });
 
-process.on("SIGTERM", () => {
-  logger.info("👋 SIGTERM RECEIVED. Shutting down gracefully");
-  if (server) {
-    server.then((s) =>
-      s.close(() => {
-        logger.info("💥 Process terminated!");
-      })
-    );
-  }
-});
+  process.on("SIGTERM", () => {
+    logger.info("👋 SIGTERM RECEIVED. Shutting down gracefully");
+    if (server) {
+      server.then((s) =>
+        s.close(() => {
+          logger.info("💥 Process terminated!");
+        })
+      );
+    }
+  });
 
-module.exports = server;
+  module.exports = server;
+}
