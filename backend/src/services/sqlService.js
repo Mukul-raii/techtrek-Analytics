@@ -8,6 +8,12 @@ class SQLService {
   }
 
   async initialize() {
+    // Check if SQL is explicitly disabled
+    if (config.sql.enabled === false) {
+      logger.info("⚠️  SQL Database disabled via configuration");
+      return;
+    }
+
     if (!config.sql.server || !config.sql.database) {
       logger.warn("⚠️  Azure SQL configuration missing. Running in mock mode.");
       return;

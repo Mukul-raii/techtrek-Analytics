@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "env": {
+    "ENABLE_SQL": "false",
+    "NODE_ENV": "production"
+  },
   "builds": [
     {
       "src": "src/server.js",
