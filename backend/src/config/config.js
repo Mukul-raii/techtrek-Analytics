@@ -22,6 +22,7 @@ const config = {
 
   // Azure SQL Database
   sql: {
+    enabled: process.env.ENABLE_SQL !== "false", // Can disable SQL with ENABLE_SQL=false
     server: process.env.SQL_SERVER,
     database: process.env.SQL_DATABASE,
     user: process.env.SQL_USER,
@@ -32,6 +33,7 @@ const config = {
         process.env.SQL_TRUST_SERVER_CERTIFICATE === "true",
       enableArithAbort: true,
       requestTimeout: 30000,
+      connectionTimeout: 3000, // 3 second timeout for connection
     },
     pool: {
       max: 10,

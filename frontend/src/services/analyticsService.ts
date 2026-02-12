@@ -70,14 +70,14 @@ class AnalyticsService {
     const { data } = response;
 
     // Transform backend data to frontend format
-    const languageStats: LanguageStats[] = (
-      data.languageStats || []
-    ).map((lang) => ({
-      language: lang.language,
-      count: lang.count,
-      percentage: lang.percentage,
-      trend: "stable" as const,
-    }));
+    const languageStats: LanguageStats[] = (data.languageStats || []).map(
+      (lang) => ({
+        language: lang.language,
+        count: lang.count,
+        percentage: lang.percentage,
+        trend: "stable" as const,
+      })
+    );
 
     const metrics: MetricCard[] = [
       {
