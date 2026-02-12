@@ -16,10 +16,34 @@ app.set("trust proxy", 1);
 // Security Middleware
 app.use(helmet());
 
-// CORS Configuration
+// CORS Configuration - Allow multiple origins including Vercel preview deployments
+const allowedOrigins = [
+  config.corsOrigin, // Main origin from env
+  "http://localhost:5173", // Local development
+  "http://localhost:3000",
+];
+
+// Also allow any Vercel deployment URL (preview deployments)
+const isVercelDeployment = (origin) => {
+  return origin && (
+    origin.includes("v0-techtrek-analytics") && 
+    origin.includes("vercel.app")
+  );
+};
+
 app.use(
   cors({
-    origin: config.corsOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, Postman, curl)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list or is a Vercel deployment
+      if (allowedOrigins.includes(origin) || isVercelDeployment(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
   })
 );
