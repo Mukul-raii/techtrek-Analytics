@@ -1,15 +1,23 @@
-import { MainLayout } from '@/components/layout/MainLayout';
-import { FilterBar } from '@/components/trending/FilterBar';
-import { RepositoryCard } from '@/components/trending/RepositoryCard';
-import { StoryCard } from '@/components/trending/StoryCard';
-import { LoadingState } from '@/components/common/LoadingState';
-import { ErrorState } from '@/components/common/ErrorState';
-import { EmptyState } from '@/components/common/EmptyState';
-import { useTrending } from '@/hooks/useTrending';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MainLayout } from "@/components/layout/MainLayout";
+import { FilterBar } from "@/components/trending/FilterBar";
+import { RepositoryCard } from "@/components/trending/RepositoryCard";
+import { StoryCard } from "@/components/trending/StoryCard";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
+import { useTrending } from "@/hooks/useTrending";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function Trending() {
-  const { repositories, stories, filters, isLoading, error, updateFilters, refetch } = useTrending();
+  const {
+    repositories,
+    stories,
+    filters,
+    isLoading,
+    error,
+    updateFilters,
+    refetch,
+  } = useTrending();
 
   if (error) {
     return (
@@ -36,13 +44,15 @@ export function Trending() {
         <FilterBar
           filters={filters}
           onFilterChange={updateFilters}
-          languages={['JavaScript', 'Python', 'TypeScript', 'Go', 'Rust']}
+          languages={["JavaScript", "Python", "TypeScript", "Go", "Rust"]}
         />
 
         {/* Content Tabs */}
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
+            <TabsTrigger value="all" className="text-xs sm:text-sm">
+              All
+            </TabsTrigger>
             <TabsTrigger value="repositories" className="text-xs sm:text-sm">
               Repos ({repositories.length})
             </TabsTrigger>

@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { DESIGN } from '@/constants/design';
+import { Link, useLocation } from "react-router-dom";
+import { DESIGN } from "@/constants/design";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -7,14 +7,14 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const location = useLocation();
-  
+
   const isActive = (path: string) => location.pathname === path;
-  
+
   return (
     <header
       className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-sm"
       style={{
-        borderColor: 'hsl(0 0% 90%)',
+        borderColor: "hsl(0 0% 90%)",
         boxShadow: DESIGN.shadow.paper,
       }}
     >
@@ -40,10 +40,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                 />
               </svg>
             </button>
-            
+
             <Link to="/" className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-gray-900 rounded-md">
-                <span className="text-white font-bold text-base sm:text-lg">TP</span>
+                <span className="text-white font-bold text-base sm:text-lg">
+                  TP
+                </span>
               </div>
               <div className="hidden xs:block">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight leading-tight">
@@ -58,9 +60,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Link
               to="/dashboard"
               className={`text-sm font-medium transition-colors py-1 ${
-                isActive('/dashboard') || isActive('/')
-                  ? 'text-gray-900 border-b-2 border-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                isActive("/dashboard") || isActive("/")
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Dashboard
@@ -68,9 +70,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Link
               to="/trending"
               className={`text-sm font-medium transition-colors py-1 ${
-                isActive('/trending')
-                  ? 'text-gray-900 border-b-2 border-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                isActive("/trending")
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Trending
@@ -78,9 +80,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Link
               to="/analytics"
               className={`text-sm font-medium transition-colors py-1 ${
-                isActive('/analytics')
-                  ? 'text-gray-900 border-b-2 border-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                isActive("/analytics")
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Analytics
@@ -88,9 +90,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Link
               to="/search"
               className={`text-sm font-medium transition-colors py-1 ${
-                isActive('/search')
-                  ? 'text-gray-900 border-b-2 border-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
+                isActive("/search")
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Search
