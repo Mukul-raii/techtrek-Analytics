@@ -1,34 +1,72 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MetricCard } from "@/components/common/MetricCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 export function Analytics() {
+  const { data, isLoading, error } = useAnalytics("month");
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading analytics...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <span className="text-4xl mb-4 block">⚠️</span>
+            <p className="text-red-600 mb-2">Failed to load analytics</p>
+            <p className="text-gray-600 text-sm">{error}</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   const metrics = [
     {
       title: "Total Growth",
-      value: "+34.5%",
-      change: 12.5,
-      trend: "up" as const,
+      value: data?.totalGrowth.value || "+0%",
+      change: data?.totalGrowth.change || 0,
+      trend: data?.totalGrowth.trend || ("stable" as const),
       description: "Compared to last month",
     },
     {
       title: "Most Popular Language",
-      value: "JavaScript",
+      value: data?.topLanguage.name || "N/A",
       trend: "stable" as const,
-      description: "32% of all repositories",
+      description: `${data?.topLanguage.percentage || 0}% of all repositories`,
     },
     {
       title: "Avg. Daily Stars",
-      value: "1.2K",
-      change: 8.7,
-      trend: "up" as const,
+      value: data?.avgDailyStars.value || "0",
+      change: data?.avgDailyStars.change || 0,
+      trend:
+        (data?.avgDailyStars.change || 0) > 0
+          ? ("up" as const)
+          : ("stable" as const),
       description: "Across all repositories",
     },
     {
       title: "Active Communities",
-      value: "156",
-      change: 15.3,
-      trend: "up" as const,
+      value: String(data?.activeCommunities.count || 0),
+      change: data?.activeCommunities.change || 0,
+      trend:
+        (data?.activeCommunities.change || 0) > 0
+          ? ("up" as const)
+          : ("stable" as const),
       description: "With 100+ members",
     },
   ];
@@ -120,37 +158,16 @@ export function Analytics() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {[
-                      {
-                        lang: "JavaScript",
-                        repos: 245,
-                        stars: "1.2M",
-                        trend: "+12%",
-                      },
-                      {
-                        lang: "Python",
-                        repos: 189,
-                        stars: "987K",
-                        trend: "+8%",
-                      },
-                      {
-                        lang: "TypeScript",
-                        repos: 156,
-                        stars: "756K",
-                        trend: "+15%",
-                      },
-                      { lang: "Go", repos: 98, stars: "543K", trend: "+6%" },
-                      { lang: "Rust", repos: 67, stars: "421K", trend: "+18%" },
-                    ].map((item) => (
+                    {(data?.topLanguages || []).map((item) => (
                       <tr
-                        key={item.lang}
+                        key={item.language}
                         className="hover:bg-gray-50 transition-colors"
                       >
                         <td className="py-3 pr-4 font-medium text-gray-900">
-                          {item.lang}
+                          {item.language}
                         </td>
                         <td className="py-3 px-2 sm:px-4 text-gray-600">
-                          {item.repos}
+                          {item.repositories}
                         </td>
                         <td className="py-3 px-2 sm:px-4 text-gray-600">
                           {item.stars}
@@ -160,6 +177,17 @@ export function Analytics() {
                         </td>
                       </tr>
                     ))}
+                    {(!data?.topLanguages ||
+                      data.topLanguages.length === 0) && (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="py-8 text-center text-gray-500"
+                        >
+                          No language data available
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
