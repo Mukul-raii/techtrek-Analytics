@@ -28,30 +28,34 @@ export function MetricCard({
   };
 
   return (
-    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 bg-white">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+    <Card className="border border-gray-200 shadow-md hover:shadow-lg transition-all duration-300 bg-white hover:bg-gray-50 hover:border-gray-300">
+      <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0 border-b border-gray-100">
+        <CardTitle className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">
           {title}
         </CardTitle>
-        {icon && <div className="text-gray-400">{icon}</div>}
+        {icon && (
+          <div className="p-2 bg-gray-100 rounded-lg text-gray-700 flex items-center justify-center">
+            {icon}
+          </div>
+        )}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+      <CardContent className="pt-4">
+        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
           {value}
         </div>
         {change !== undefined && (
           <div
-            className={`flex items-center text-xs sm:text-sm ${getTrendColor()}`}
+            className={`flex items-center text-xs sm:text-sm font-semibold gap-1.5 mb-2 ${getTrendColor()}`}
           >
-            <span className="mr-1">{getTrendIcon()}</span>
-            <span className="font-medium">{Math.abs(change)}%</span>
-            <span className="text-gray-500 ml-1 hidden sm:inline">
+            <span className="text-base">{getTrendIcon()}</span>
+            <span>{Math.abs(change)}%</span>
+            <span className="text-gray-500 font-normal hidden sm:inline">
               from last period
             </span>
           </div>
         )}
         {description && (
-          <p className="text-xs text-gray-500 mt-2">{description}</p>
+          <p className="text-xs text-gray-600">{description}</p>
         )}
       </CardContent>
     </Card>

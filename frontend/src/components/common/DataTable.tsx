@@ -17,14 +17,14 @@ export function DataTable<T extends Record<string, any>>({
   rowKey,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="w-full text-sm bg-white">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
+          <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={`px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 ${
+                className={`px-3 sm:px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide ${
                   col.className || ""
                 }`}
               >
@@ -33,16 +33,16 @@ export function DataTable<T extends Record<string, any>>({
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-100">
           {data.map((row, idx) => (
             <tr
               key={String(row[rowKey]) || idx}
-              className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              className="hover:bg-gray-50 transition-colors duration-150"
             >
               {columns.map((col) => (
                 <td
                   key={String(col.key)}
-                  className={`px-3 sm:px-4 py-3 text-gray-900 ${col.className || ""}`}
+                  className={`px-3 sm:px-4 py-3 text-gray-900 font-medium ${col.className || ""}`}
                 >
                   {col.render ? col.render(row[col.key], row) : String(row[col.key])}
                 </td>
