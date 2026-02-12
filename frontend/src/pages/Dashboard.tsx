@@ -1,36 +1,68 @@
-import { Link } from 'react-router-dom';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { MetricCard } from '@/components/common/MetricCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from "react-router-dom";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { MetricCard } from "@/components/common/MetricCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDashboard } from "@/hooks/useDashboard";
 
 export function Dashboard() {
-  const metrics = [
+  const { metrics, isLoading, error } = useDashboard();
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-100">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-100">
+          <div className="text-center">
+            <span className="text-4xl mb-4 block">⚠️</span>
+            <p className="text-red-600 mb-2">Failed to load dashboard</p>
+            <p className="text-gray-600 text-sm">{error}</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const metricCards = [
     {
-      title: 'Total Repositories',
-      value: '1,234',
-      change: 12.5,
-      trend: 'up' as const,
+      title: "Total Repositories",
+      value: String(metrics?.totalRepositories.value || 0),
+      change: metrics?.totalRepositories.change || 0,
+      trend: metrics?.totalRepositories.trend || ("stable" as const),
       icon: <span className="text-2xl">📦</span>,
     },
     {
-      title: 'Active Stories',
-      value: '456',
-      change: 8.2,
-      trend: 'up' as const,
+      title: "Active Stories",
+      value: String(metrics?.activeStories.value || 0),
+      change: metrics?.activeStories.change || 0,
+      trend: metrics?.activeStories.trend || ("stable" as const),
       icon: <span className="text-2xl">📰</span>,
     },
     {
-      title: 'Top Languages',
-      value: '25',
-      change: -2.1,
-      trend: 'down' as const,
+      title: "Top Languages",
+      value: String(metrics?.topLanguages.value || 0),
+      change: metrics?.topLanguages.change || 0,
+      trend: metrics?.topLanguages.trend || ("stable" as const),
       icon: <span className="text-2xl">💻</span>,
     },
     {
-      title: 'Avg. Stars',
-      value: '3.2K',
-      change: 5.7,
-      trend: 'up' as const,
+      title: "Avg. Stars",
+      value: metrics?.avgStars.value || "0",
+      change: metrics?.avgStars.change || 0,
+      trend: metrics?.avgStars.trend || ("stable" as const),
       icon: <span className="text-2xl">⭐</span>,
     },
   ];
@@ -50,7 +82,7 @@ export function Dashboard() {
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
-          {metrics.map((metric) => (
+          {metricCards.map((metric) => (
             <MetricCard key={metric.title} {...metric} />
           ))}
         </div>
@@ -61,7 +93,9 @@ export function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">🔥</span>
-                <CardTitle className="text-base sm:text-lg">Trending Repositories</CardTitle>
+                <CardTitle className="text-base sm:text-lg">
+                  Trending Repositories
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -81,7 +115,9 @@ export function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">📈</span>
-                <CardTitle className="text-base sm:text-lg">Analytics Insights</CardTitle>
+                <CardTitle className="text-base sm:text-lg">
+                  Analytics Insights
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
