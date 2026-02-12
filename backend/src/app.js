@@ -9,6 +9,10 @@ const notFound = require('./middleware/notFound');
 
 const app = express();
 
+// Trust proxy - Required for Vercel and other reverse proxies
+// This allows Express to trust X-Forwarded-* headers
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet());
 
