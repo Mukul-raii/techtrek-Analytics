@@ -74,7 +74,27 @@ class CosmosService {
     }
 
     try {
-      const { limit, source, date, sort } = filters;
+      const { limit, source, timeRange = "week", sort } = filters;
+
+      // Calculate date filters based on time range
+      // Note: Only filter if createdAt field exists in the data
+      let dateFilter = "";
+      if (timeRange === "today" || timeRange === "daily") {
+        const yesterday = new Date(
+          Date.now() - 24 * 60 * 60 * 1000
+        ).toISOString();
+        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${yesterday}")`;
+      } else if (timeRange === "week" || timeRange === "weekly") {
+        const lastWeek = new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString();
+        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${lastWeek}")`;
+      } else if (timeRange === "month" || timeRange === "monthly") {
+        const lastMonth = new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000
+        ).toISOString();
+        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${lastMonth}")`;
+      }
 
       let container;
       if (source === "github") {
@@ -84,25 +104,27 @@ class CosmosService {
       }
 
       if (container) {
+        // Use single ORDER BY field to avoid composite index requirement
+        const orderByField = source === "github" ? "c.stars" : "c.points";
         const querySpec = {
-          query: `SELECT TOP @limit * FROM c ORDER BY c.timestamp DESC`,
+          query: `SELECT TOP @limit * FROM c WHERE 1=1 ${dateFilter} ORDER BY ${orderByField} DESC`,
           parameters: [{ name: "@limit", value: limit }],
         };
 
         const { resources } = await container.items.query(querySpec).fetchAll();
         return resources;
       } else {
-        // Fetch from both containers
+        // Fetch from both containers with single ORDER BY
         const githubQuery = this.containers.github.items
           .query({
-            query: `SELECT TOP @limit * FROM c ORDER BY c.timestamp DESC`,
+            query: `SELECT TOP @limit * FROM c WHERE 1=1 ${dateFilter} ORDER BY c.stars DESC`,
             parameters: [{ name: "@limit", value: Math.floor(limit / 2) }],
           })
           .fetchAll();
 
         const hackerNewsQuery = this.containers.hackerNews.items
           .query({
-            query: `SELECT TOP @limit * FROM c ORDER BY c.timestamp DESC`,
+            query: `SELECT TOP @limit * FROM c ORDER BY c.points DESC`,
             parameters: [{ name: "@limit", value: Math.ceil(limit / 2) }],
           })
           .fetchAll();
@@ -187,9 +209,8 @@ class CosmosService {
   }
 
   async getSourceAnalytics(source, range = "month") {
-    const containerName =
-      source === "github" ? "github" : "hackerNews";
-    
+    const containerName = source === "github" ? "github" : "hackerNews";
+
     if (!this.client) {
       return this._getMockSourceAnalytics(source);
     }
@@ -320,9 +341,7 @@ class CosmosService {
         (sum, item) => sum + (item.forks || 0),
         0
       );
-      const avgGithubStars = Math.round(
-        totalGithubStars / githubItems.length
-      );
+      const avgGithubStars = Math.round(totalGithubStars / githubItems.length);
 
       // Calculate HackerNews stats
       const totalHNPoints = hackerNewsItems.reduce(
@@ -382,11 +401,41 @@ class CosmosService {
       hackerNewsCount: 567,
       avgPopularity: 2575,
       languageStats: [
-        { language: "JavaScript", count: 250, stars: 1000000, avgStars: 4000, percentage: 20.2 },
-        { language: "Python", count: 200, stars: 800000, avgStars: 4000, percentage: 16.2 },
-        { language: "TypeScript", count: 150, stars: 600000, avgStars: 4000, percentage: 12.2 },
-        { language: "Go", count: 100, stars: 400000, avgStars: 4000, percentage: 8.1 },
-        { language: "Rust", count: 80, stars: 320000, avgStars: 4000, percentage: 6.5 },
+        {
+          language: "JavaScript",
+          count: 250,
+          stars: 1000000,
+          avgStars: 4000,
+          percentage: 20.2,
+        },
+        {
+          language: "Python",
+          count: 200,
+          stars: 800000,
+          avgStars: 4000,
+          percentage: 16.2,
+        },
+        {
+          language: "TypeScript",
+          count: 150,
+          stars: 600000,
+          avgStars: 4000,
+          percentage: 12.2,
+        },
+        {
+          language: "Go",
+          count: 100,
+          stars: 400000,
+          avgStars: 4000,
+          percentage: 8.1,
+        },
+        {
+          language: "Rust",
+          count: 80,
+          stars: 320000,
+          avgStars: 4000,
+          percentage: 6.5,
+        },
       ],
       githubStats: {
         totalRepositories: 1234,
