@@ -25,8 +25,9 @@ const allowedOrigins = [
 
 // Also allow any Vercel deployment URL (preview deployments)
 const isVercelDeployment = (origin) => {
-  return origin && (
-    origin.includes("v0-techtrek-analytics") && 
+  return (
+    origin &&
+    origin.includes("v0-techtrek-analytics") &&
     origin.includes("vercel.app")
   );
 };
@@ -36,7 +37,7 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, curl)
       if (!origin) return callback(null, true);
-      
+
       // Check if origin is in allowed list or is a Vercel deployment
       if (allowedOrigins.includes(origin) || isVercelDeployment(origin)) {
         callback(null, true);

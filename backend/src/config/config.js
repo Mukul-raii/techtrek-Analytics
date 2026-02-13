@@ -33,7 +33,7 @@ const config = {
         process.env.SQL_TRUST_SERVER_CERTIFICATE === "true",
       enableArithAbort: true,
       requestTimeout: 30000,
-      connectionTimeout: 3000, // 3 second timeout for connection
+      connectionTimeout: 15000, // 15 second timeout for connection (Azure SQL needs more time)
     },
     pool: {
       max: 10,

@@ -4,6 +4,7 @@ const logger = require("./utils/logger");
 const cosmosService = require("./services/cosmosService");
 const sqlService = require("./services/sqlService");
 const searchService = require("./services/searchService");
+const schedulerService = require("./services/schedulerService");
 
 const PORT = config.port || 5000;
 
@@ -54,6 +55,10 @@ async function startServer() {
       throw new Error("Critical service (Cosmos DB) failed to initialize");
     }
 
+    // Start scheduler service
+    logger.info("Starting scheduler service...");
+    schedulerService.start();
+
     // Start server
     const server = app.listen(PORT, () => {
       logger.info(`🚀 TechPulse Analytics Server running on port ${PORT}`);
@@ -92,6 +97,10 @@ if (process.env.VERCEL) {
 
   process.on("SIGTERM", () => {
     logger.info("👋 SIGTERM RECEIVED. Shutting down gracefully");
+
+    // Stop scheduler
+    schedulerService.stop();
+
     if (server) {
       server.then((s) =>
         s.close(() => {

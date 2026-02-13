@@ -1,7 +1,7 @@
-const axios = require('axios');
-const config = require('../config/config');
-const logger = require('../utils/logger');
-const cosmosService = require('./cosmosService');
+const axios = require("axios");
+const config = require("../config/config");
+const logger = require("../utils/logger");
+const cosmosService = require("./cosmosService");
 
 class IngestService {
   constructor() {
@@ -11,8 +11,8 @@ class IngestService {
 
   async ingestData(source) {
     if (this.ingestionInProgress) {
-      logger.warn('Ingestion already in progress');
-      return { status: 'skipped', message: 'Ingestion already in progress' };
+      logger.warn("Ingestion already in progress");
+      return { status: "skipped", message: "Ingestion already in progress" };
     }
 
     this.ingestionInProgress = true;
@@ -21,20 +21,20 @@ class IngestService {
     try {
       let result;
 
-      if (source === 'github' || source === 'all') {
+      if (source === "github" || source === "all") {
         result = await this.ingestGitHubData();
       }
 
-      if (source === 'hackernews' || source === 'all') {
+      if (source === "hackernews" || source === "all") {
         result = await this.ingestHackerNewsData();
       }
 
       this.lastIngestion = {
         timestamp: new Date().toISOString(),
         source,
-        status: 'success',
+        status: "success",
         duration: Date.now() - startTime,
-        itemsIngested: result?.count || 0
+        itemsIngested: result?.count || 0,
       };
 
       logger.info(`Ingestion completed for ${source}:`, this.lastIngestion);
@@ -43,9 +43,9 @@ class IngestService {
       this.lastIngestion = {
         timestamp: new Date().toISOString(),
         source,
-        status: 'failed',
+        status: "failed",
         duration: Date.now() - startTime,
-        error: error.message
+        error: error.message,
       };
 
       logger.error(`Ingestion failed for ${source}:`, error.message);
@@ -57,34 +57,68 @@ class IngestService {
 
   async ingestGitHubData() {
     try {
-      logger.info('Fetching GitHub trending repositories...');
+      logger.info("Fetching GitHub trending repositories...");
 
       const headers = {};
       if (config.github.token) {
         headers.Authorization = `token ${config.github.token}`;
       }
 
-      // Fetch trending repositories
-      const response = await axios.get(
+      // Calculate date ranges for trending
+      const now = new Date();
+      const yesterday = new Date(now - 24 * 60 * 60 * 1000);
+      const lastWeek = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+      // Format dates for GitHub API (YYYY-MM-DD)
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      const lastWeekStr = lastWeek.toISOString().split("T")[0];
+
+      // Fetch trending repositories created recently (daily trending)
+      const dailyResponse = await axios.get(
         `${config.github.apiUrl}/search/repositories`,
         {
           headers,
           params: {
-            q: 'stars:>1000',
-            sort: 'stars',
-            order: 'desc',
-            per_page: 30
-          }
+            q: `created:>${yesterdayStr} stars:>10`,
+            sort: "stars",
+            order: "desc",
+            per_page: 20,
+          },
         }
       );
 
-      const repositories = response.data.items;
-      logger.info(`Fetched ${repositories.length} GitHub repositories`);
+      // Fetch trending repositories from last week (weekly trending)
+      const weeklyResponse = await axios.get(
+        `${config.github.apiUrl}/search/repositories`,
+        {
+          headers,
+          params: {
+            q: `created:>${lastWeekStr} stars:>50`,
+            sort: "stars",
+            order: "desc",
+            per_page: 20,
+          },
+        }
+      );
+
+      // Combine and deduplicate
+      const allRepos = [
+        ...dailyResponse.data.items,
+        ...weeklyResponse.data.items,
+      ];
+      const uniqueRepos = Array.from(
+        new Map(allRepos.map((repo) => [repo.id, repo])).values()
+      );
+
+      const repositories = uniqueRepos.slice(0, 30);
+      logger.info(
+        `Fetched ${repositories.length} GitHub trending repositories (daily + weekly)`
+      );
 
       // Store in Cosmos DB
-      const items = repositories.map(repo => ({
+      const items = repositories.map((repo) => ({
         id: `github-${repo.id}`,
-        source: 'github',
+        source: "github",
         repository: repo.full_name,
         description: repo.description,
         stars: repo.stargazers_count,
@@ -92,25 +126,29 @@ class IngestService {
         language: repo.language,
         url: repo.html_url,
         owner: repo.owner.login,
+        owner_avatar_url: repo.owner.avatar_url, // ✅ NEW: Owner avatar for UI
         topics: repo.topics || [],
+        createdAt: repo.created_at,
+        updatedAt: repo.updated_at,
         timestamp: new Date().toISOString(),
-        partitionKey: 'github'
+        fetchedAt: new Date().toISOString(),
+        partitionKey: "github",
       }));
 
       // Save to Cosmos DB using batch upsert
-      const savedItems = await cosmosService.upsertBatch('github', items);
+      const savedItems = await cosmosService.upsertBatch("github", items);
 
       logger.info(`Ingested ${savedItems.length} GitHub items`);
       return { count: savedItems.length, items: savedItems };
     } catch (error) {
-      logger.error('Error ingesting GitHub data:', error.message);
+      logger.error("Error ingesting GitHub data:", error.message);
       throw error;
     }
   }
 
   async ingestHackerNewsData() {
     try {
-      logger.info('Fetching HackerNews top stories...');
+      logger.info("Fetching HackerNews top stories...");
 
       // Fetch top story IDs
       const topStoriesResponse = await axios.get(
@@ -121,34 +159,35 @@ class IngestService {
       logger.info(`Fetched ${storyIds.length} HackerNews story IDs`);
 
       // Fetch individual stories
-      const storyPromises = storyIds.map(id =>
+      const storyPromises = storyIds.map((id) =>
         axios.get(`${config.hackerNews.apiUrl}/item/${id}.json`)
       );
 
       const stories = await Promise.all(storyPromises);
 
       const items = stories
-        .map(response => response.data)
-        .filter(story => story && story.type === 'story')
-        .map(story => ({
+        .map((response) => response.data)
+        .filter((story) => story && story.type === "story")
+        .map((story) => ({
           id: `hn-${story.id}`,
-          source: 'hackernews',
+          source: "hackernews",
           title: story.title,
           url: story.url,
+          type: story.type || "story", // ✅ NEW: Story type (story/ask/show/job)
           points: story.score,
           comments: story.descendants || 0,
           author: story.by,
           timestamp: new Date(story.time * 1000).toISOString(),
-          partitionKey: 'hackernews'
+          partitionKey: "hackernews",
         }));
 
       // Save to Cosmos DB using batch upsert
-      const savedItems = await cosmosService.upsertBatch('hackerNews', items);
+      const savedItems = await cosmosService.upsertBatch("hackerNews", items);
 
       logger.info(`Ingested ${savedItems.length} HackerNews items`);
       return { count: savedItems.length, items: savedItems };
     } catch (error) {
-      logger.error('Error ingesting HackerNews data:', error.message);
+      logger.error("Error ingesting HackerNews data:", error.message);
       throw error;
     }
   }
@@ -157,7 +196,7 @@ class IngestService {
     return {
       lastIngestion: this.lastIngestion,
       ingestionInProgress: this.ingestionInProgress,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
