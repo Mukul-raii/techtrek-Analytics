@@ -3,7 +3,10 @@ export interface LanguageStats {
   language: string;
   count: number;
   percentage: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
+  change?: number;
+  changePercent?: number;
+  previousCount?: number;
 }
 
 export interface TrendData {
@@ -16,7 +19,7 @@ export interface MetricCard {
   title: string;
   value: string | number;
   change: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   icon?: string;
 }
 

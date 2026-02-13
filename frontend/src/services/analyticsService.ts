@@ -98,19 +98,123 @@ class AnalyticsService {
   }
 
   async getLanguageStats(dateRange?: string): Promise<LanguageStats[]> {
-    const response = await apiClient.get<BackendAnalyticsResponse>(
-      "/api/analytics",
-      {
-        params: { range: dateRange || "month" },
-      }
-    );
+    try {
+      // Use new SQL-backed endpoint
+      const response = await apiClient.get<{
+        status: string;
+        source: string;
+        data: {
+          languages: Array<{
+            language: string;
+            count: number;
+            percentage?: number;
+          }>;
+          total_items: number;
+          last_updated: string;
+        };
+      }>("/api/analytics/languages/stats", {
+        params: { source: "github" },
+      });
 
-    return (response.data.languageStats || []).map((lang) => ({
-      language: lang.language,
-      count: lang.count,
-      percentage: lang.percentage,
-      trend: "stable" as const,
-    }));
+      return (response.data.languages || []).map((lang) => ({
+        language: lang.language,
+        count: lang.count,
+        percentage: lang.percentage || 0,
+        trend: "stable" as const,
+      }));
+    } catch (error) {
+      console.error("Error fetching language stats:", error);
+      // Fallback to original endpoint
+      const response = await apiClient.get<BackendAnalyticsResponse>(
+        "/api/analytics",
+        {
+          params: { range: dateRange || "month" },
+        }
+      );
+
+      return (response.data.languageStats || []).map((lang) => ({
+        language: lang.language,
+        count: lang.count,
+        percentage: lang.percentage,
+        trend: "stable" as const,
+      }));
+    }
+  }
+
+  async getLanguageGrowth(days: number = 7): Promise<LanguageStats[]> {
+    try {
+      const response = await apiClient.get<{
+        status: string;
+        days: number;
+        data: Array<{
+          language: string;
+          count: number;
+          percentage?: number;
+          previousCount: number;
+          change: number;
+          changePercent: number;
+          trend: "up" | "down" | "stable";
+        }>;
+      }>("/api/analytics/languages/growth", {
+        params: { days },
+      });
+
+      return (response.data || []).map((lang) => ({
+        language: lang.language,
+        count: lang.count,
+        percentage: lang.percentage || 0,
+        trend: lang.trend,
+        change: lang.changePercent,
+      }));
+    } catch (error) {
+      console.error("Error fetching language growth:", error);
+      return [];
+    }
+  }
+
+  async getGrowthMetrics(
+    source: "github" | "hackernews" = "github",
+    days: number = 7
+  ) {
+    try {
+      const response = await apiClient.get<{
+        status: string;
+        source: string;
+        days: number;
+        data: {
+          currentValue: number;
+          previousValue: number;
+          change: number;
+          changePercent: number;
+          trend: "up" | "down" | "stable";
+          itemsToday: number;
+          itemsYesterday: number;
+          itemChange: number;
+          metrics?: Array<{
+            date: string;
+            source: string;
+            item_count: number;
+            popularity_score: number;
+          }>;
+        };
+      }>("/api/analytics/growth", {
+        params: { source, days },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching growth metrics:", error);
+      return {
+        currentValue: 0,
+        previousValue: 0,
+        change: 0,
+        changePercent: 0,
+        trend: "stable" as const,
+        itemsToday: 0,
+        itemsYesterday: 0,
+        itemChange: 0,
+      };
+    }
   }
 
   async getTrendData(metric: string, dateRange?: string): Promise<TrendData[]> {

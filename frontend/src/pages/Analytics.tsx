@@ -5,6 +5,7 @@ import { DataTable } from "@/components/common/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, BarChart3, PieChart, Activity } from "lucide-react";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { LanguageGrowth } from "@/components/analytics/LanguageGrowth";
 
 export function Analytics() {
   const { data, isLoading, error } = useAnalytics("month");
@@ -335,6 +336,9 @@ export function Analytics() {
             rowKey="rank"
           />
         </ChartCard>
+
+        {/* Language Growth Trends */}
+        <LanguageGrowth days={7} limit={15} />
 
         {/* Additional Insights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">

@@ -6,6 +6,8 @@ import { StatGrid } from "@/components/dashboard/StatGrid";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { ChartCard } from "@/components/common/ChartCard";
 import { DataTable } from "@/components/common/DataTable";
+import { GrowthIndicator } from "@/components/dashboard/GrowthIndicator";
+import { TrendingTopics } from "@/components/trending/TrendingTopics";
 import { useDashboard } from "@/hooks/useDashboard";
 import { TrendingUp, Activity, Zap } from "lucide-react";
 
@@ -106,8 +108,53 @@ export function Dashboard() {
           onSourceChange={setSource}
         />
 
+        {/* Growth Indicators - Real-time metrics with trends */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <GrowthIndicator
+            source="github"
+            title="GitHub Stars Growth"
+            days={7}
+            formatValue={(val) => `${(val / 1000).toFixed(1)}K`}
+          />
+          <GrowthIndicator
+            source="hackernews"
+            title="HN Points Growth"
+            days={7}
+          />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stats[2].title}
+              </CardTitle>
+              {stats[2].icon}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats[2].value}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats[2].change > 0 ? "+" : ""}
+                {stats[2].change}% from last period
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stats[3].title}
+              </CardTitle>
+              {stats[3].icon}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats[3].value}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats[3].change > 0 ? "+" : ""}
+                {stats[3].change}% from last period
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Key Metrics */}
-        <StatGrid stats={stats} columns={4} />
+        <StatGrid stats={stats.slice(0, 2)} columns={2} />
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
@@ -117,31 +164,49 @@ export function Dashboard() {
               title="Activity Trend"
               subtitle="Last 7 days activity across all sources"
             >
-              <div className="h-64 flex items-end gap-1">
-                {activityData.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-1 group"
-                  >
-                    <div
-                      className="w-full bg-gray-900 rounded-sm transition-all duration-200 hover:bg-gray-700 cursor-pointer"
-                      style={{
-                        height: `${(item.repositories / 400) * 100}%`,
-                      }}
-                      title={`${item.repositories} repos, ${item.stories} stories`}
-                    />
-                    <span className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {item.date.split("-")[2]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-900 rounded-sm" />
-                  <span>Repositories</span>
+              {activityData.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <p>No activity data available</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="h-64 flex items-end gap-2 bg-gray-50 px-4 py-4 rounded-lg border border-gray-200">
+                    {activityData.map((item, idx) => {
+                      const maxValue = Math.max(
+                        ...activityData.map((d) => d.repositories),
+                        1
+                      );
+                      const heightPercentage =
+                        (item.repositories / maxValue) * 100;
+
+                      return (
+                        <div
+                          key={idx}
+                          className="flex-1 flex flex-col items-center gap-1 group"
+                        >
+                          <div
+                            className="w-full bg-gray-900 rounded-t transition-all duration-200 hover:bg-gray-700 cursor-pointer shadow-sm"
+                            style={{
+                              height: `${Math.max(heightPercentage, 10)}%`,
+                              minHeight: "12px",
+                            }}
+                            title={`Date: ${item.date}\n${item.repositories} repositories\n${item.stories} stories`}
+                          />
+                          <span className="text-xs text-gray-600 mt-1 font-medium">
+                            {item.date.split("-")[2]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-gray-900 rounded-sm" />
+                      <span>Repositories ({activityData.length} days)</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </ChartCard>
           </div>
 
@@ -170,6 +235,9 @@ export function Dashboard() {
             </div>
           </ChartCard>
         </div>
+
+        {/* Trending Topics Section */}
+        <TrendingTopics source="github" limit={15} />
 
         {/* Data Tables Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">

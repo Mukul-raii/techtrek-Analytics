@@ -83,6 +83,19 @@ interface TrendingResponse {
   data: Array<TrendingRepository | HackerNewsStory>;
 }
 
+interface DailyMetricResponse {
+  date: string;
+  source: string;
+  itemCount: number;
+  popularityScore: number;
+}
+
+interface DailyMetricsApiResponse {
+  status: string;
+  range: string;
+  data: DailyMetricResponse[];
+}
+
 export function useDashboard(
   timeRange: string = "month",
   source: string = "all"
@@ -105,6 +118,17 @@ export function useDashboard(
       );
 
       const analyticsData = analyticsResponse.data;
+
+      // Fetch daily metrics for the chart
+      const dailyMetricsResponse = await apiClient.get<DailyMetricsApiResponse>(
+        "/api/analytics/daily",
+        {
+          params: {
+            range: "week",
+            source: source !== "all" ? source : undefined,
+          },
+        }
+      );
 
       // Fetch trending data
       const trendingParams: Record<string, string> = {
@@ -174,8 +198,10 @@ export function useDashboard(
           trend: `+${Math.floor(Math.random() * 20 + 5)}%`,
         }));
 
-      // Generate activity data for last 7 days
-      const activityData = generateActivityData(analyticsData);
+      // Transform daily metrics data for the chart
+      const activityData = transformDailyMetrics(
+        dailyMetricsResponse.data || []
+      );
 
       const dashboardData: DashboardData = {
         metrics,
@@ -226,26 +252,36 @@ function formatNumber(num: number): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function generateActivityData(analyticsData: any): ActivityDataPoint[] {
-  const days = 7;
-  const today = new Date();
-  const data: ActivityDataPoint[] = [];
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split("T")[0];
-
-    // Generate realistic data based on analyticsData
-    const baseRepos = analyticsData.githubStats?.totalRepositories || 100;
-    const baseStories = analyticsData.hackerNewsStats?.totalStories || 50;
-
-    data.push({
-      date: dateStr,
-      repositories: Math.floor(baseRepos / 30 + Math.random() * 100),
-      stories: Math.floor(baseStories / 30 + Math.random() * 50),
-    });
+function transformDailyMetrics(metrics: any[]): ActivityDataPoint[] {
+  if (!metrics || metrics.length === 0) {
+    // Return empty array if no data - chart will show "No data" message
+    return [];
   }
+
+  // Group metrics by date and count items by source
+  const dateMap = new Map<string, { repositories: number; stories: number }>();
+
+  metrics.forEach((metric) => {
+    const date = metric.date.split("T")[0]; // Normalize date format
+    const existing = dateMap.get(date) || { repositories: 0, stories: 0 };
+
+    if (metric.source === "github") {
+      existing.repositories += metric.itemCount || 0;
+    } else if (metric.source === "hackernews") {
+      existing.stories += metric.itemCount || 0;
+    }
+
+    dateMap.set(date, existing);
+  });
+
+  // Convert to array and sort by date
+  const data: ActivityDataPoint[] = Array.from(dateMap.entries())
+    .map(([date, counts]) => ({
+      date,
+      repositories: counts.repositories,
+      stories: counts.stories,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return data;
 }
