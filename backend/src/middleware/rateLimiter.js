@@ -10,13 +10,9 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Custom key generator to properly handle proxy headers
-  // This will use the real client IP from X-Forwarded-For when behind a proxy
-  keyGenerator: (req) => {
-    // When behind a proxy (Vercel), get the real IP from X-Forwarded-For
-    // req.ip already handles this correctly when trust proxy is enabled
-    return req.ip || req.connection.remoteAddress || "unknown";
-  },
+  // Use req.ip which already handles proxy headers when trust proxy is enabled
+  // This automatically normalizes IPv6 addresses correctly
+  skip: (req) => false, // Don't skip any requests
 });
 
 module.exports = limiter;

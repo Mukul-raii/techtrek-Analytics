@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 package-lock.json
-backend/src/scripts
+backend/src/script
 backend/logs
 
 # Environment variables
