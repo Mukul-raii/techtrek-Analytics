@@ -5,7 +5,6 @@ import {
   Search,
   CheckCircle2,
   Flame,
-  Settings,
 } from "lucide-react";
 import type { ShellSidebarSection } from "@/types/uiTheme";
 
