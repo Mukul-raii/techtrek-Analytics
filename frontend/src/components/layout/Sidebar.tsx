@@ -1,74 +1,121 @@
 import { Link, useLocation } from "react-router-dom";
+import {
+  BarChart3,
+  LayoutGrid,
+  Search,
+  CheckCircle2,
+  Flame,
+} from "lucide-react";
+import type { ShellSidebarSection } from "@/types/uiTheme";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const sections: ShellSidebarSection[] = [
+  {
+    label: "Menu",
+    items: [
+      {
+        label: "Dashboard",
+        route: "/dashboard",
+        icon: <LayoutGrid className="h-4 w-4" />,
+      },
+      {
+        label: "Trending",
+        route: "/trending",
+        icon: <Flame className="h-4 w-4" />,
+      },
+      {
+        label: "Analytics",
+        route: "/analytics",
+        icon: <BarChart3 className="h-4 w-4" />,
+      },
+      {
+        label: "Search",
+        route: "/search",
+        icon: <Search className="h-4 w-4" />,
+      },
+    ],
+  },
+];
+
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
 
-  const menuItems = [
-    { icon: "📊", label: "Dashboard", href: "/dashboard" },
-    { icon: "🔥", label: "Trending", href: "/trending" },
-    { icon: "📈", label: "Analytics", href: "/analytics" },
-    { icon: "🔍", label: "Search", href: "/search" },
-  ];
-
-  const isActive = (path: string) =>
-    location.pathname === path ||
-    (path === "/dashboard" && location.pathname === "/");
+  const isActive = (route: string) => {
+    if (route === "/dashboard") {
+      return location.pathname === "/" || location.pathname === "/dashboard";
+    }
+    return location.pathname === route;
+  };
 
   return (
     <>
-      {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden transition-opacity"
-          onClick={onClose}
           aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-sm lg:hidden"
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`
-          fixed top-14 sm:top-16 left-0 bottom-0 w-64 bg-white border-r z-40
-          transform transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50 w-[290px] bg-white p-3 transition-transform duration-300 ease-out lg:static lg:h-full lg:shrink-0 lg:translate-x-0 lg:w-[250px] lg:bg-transparent lg:p-0
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:relative lg:top-0 lg:min-h-screen
         `}
-        style={{ borderColor: "hsl(0 0% 90%)" }}
       >
-        <nav className="p-3 sm:p-4 space-y-1">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={() => onClose()}
-              className={`
-                flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg 
-                text-sm font-medium transition-all duration-200
-                ${
-                  isActive(item.href)
-                    ? "bg-gray-100 text-gray-900 shadow-sm"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                }
-              `}
-            >
-              <span className="text-lg sm:text-xl">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <div className="panel-surface flex h-full flex-col gap-3 overflow-hidden p-3">
+          <div className="panel-muted flex items-center gap-3 px-3 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">TechPulse</p>
+              <p className="text-xs text-slate-500">Analytics</p>
+            </div>
+          </div>
 
-        <div
-          className="absolute bottom-0 left-0 right-0 p-4 border-t"
-          style={{ borderColor: "hsl(0 0% 90%)" }}
-        >
-          <div className="text-xs text-gray-500 text-center">
-            <p className="font-medium">TechPulse v1.0</p>
-            <p className="mt-1">© 2024 Analytics</p>
+          <div className="flex-1 px-1">
+            {sections.map((section) => (
+              <div key={section.label} className="mb-4">
+                <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {section.label}
+                </p>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const active = isActive(item.route);
+                    return (
+                      <Link
+                        key={`${section.label}-${item.label}`}
+                        to={item.route}
+                        onClick={onClose}
+                        className={`
+                          flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors
+                          ${
+                            active
+                              ? "bg-blue-100 text-blue-800"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }
+                        `}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </span>
+                        {item.badge ? (
+                          <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </aside>

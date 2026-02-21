@@ -1,38 +1,45 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ReactNode } from "react";
+import { MoreHorizontal } from "lucide-react";
+import type { ChartPanelProps } from "@/types/uiTheme";
 
-interface ChartCardProps {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
+interface LegacyChartCardProps extends ChartPanelProps {
+  action?: ReactNode;
 }
 
 export function ChartCard({
   title,
   subtitle,
-  children,
+  actions,
   action,
-}: ChartCardProps) {
+  loading,
+  empty,
+  emptyLabel = "No data available",
+  error,
+  children,
+}: LegacyChartCardProps) {
+  const headerAction = actions ?? action;
+
   return (
-    <Card className="border border-gray-200 shadow-md hover:shadow-lg transition-all duration-300 bg-white hover:border-gray-300">
-      <CardHeader className="flex flex-row items-center justify-between pb-4 space-y-0 border-b border-gray-100">
-        <div className="flex-1">
-          <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
-            {title}
-          </CardTitle>
-          {subtitle && (
-            <p className="text-xs sm:text-sm text-gray-600 mt-1.5">
-              {subtitle}
-            </p>
+    <section className="panel-surface h-full">
+      <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+        <div>
+          <h3 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h3>
+          {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+        </div>
+        <div className="text-slate-400">
+          {headerAction ?? (
+            <button className="rounded-lg p-1 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Panel options">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
           )}
         </div>
-        {action && (
-          <div className="text-gray-400 hover:text-gray-600 transition-colors ml-4">
-            {action}
-          </div>
-        )}
-      </CardHeader>
-      <CardContent className="pt-5 sm:pt-6">{children}</CardContent>
-    </Card>
+      </header>
+      <div className="px-4 py-4">
+        {loading ? <p className="text-sm text-slate-500">Loading...</p> : null}
+        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+        {!loading && !error && empty ? <p className="text-sm text-slate-500">{emptyLabel}</p> : null}
+        {!loading && !error && !empty ? children : null}
+      </div>
+    </section>
   );
 }

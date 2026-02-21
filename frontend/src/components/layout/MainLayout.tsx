@@ -11,17 +11,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { ui, toggleSidebar } = useAppStore();
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
-      <Header onMenuClick={toggleSidebar} />
+    <div className="h-screen w-full overflow-hidden ">
+      <div className="app-shell">
+        <div className="flex h-full min-h-0 gap-3">
+          <Sidebar isOpen={ui.sidebarOpen} onClose={toggleSidebar} />
 
-      <div className="flex w-full">
-        <Sidebar isOpen={ui.sidebarOpen} onClose={toggleSidebar} />
-
-        <main className="flex-1 w-full overflow-x-hidden">
-          <div className="container mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-            {children}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <Header onMenuClick={toggleSidebar} />
+            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/65 p-3 md:p-4">
+              {children}
+            </main>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

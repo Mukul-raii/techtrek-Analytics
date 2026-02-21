@@ -10,9 +10,21 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Use req.ip which already handles proxy headers when trust proxy is enabled
-  // This automatically normalizes IPv6 addresses correctly
-  skip: (req) => false, // Don't skip any requests
+  // Skip rate limiting for localhost in development
+  skip: (req) => {
+    if (config.nodeEnv === "development") {
+      const ip = req.ip;
+      // Skip for localhost, 127.0.0.1, and ::1 (IPv6 localhost)
+      return (
+        ip === "::1" ||
+        ip === "127.0.0.1" ||
+        ip === "localhost" ||
+        ip.includes("127.0.0.1") ||
+        ip.includes("::ffff:127.0.0.1")
+      );
+    }
+    return false;
+  },
 });
 
 module.exports = limiter;

@@ -1,431 +1,153 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { MetricCard } from "@/components/common/MetricCard";
 import { ChartCard } from "@/components/common/ChartCard";
 import { DataTable } from "@/components/common/DataTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, BarChart3, PieChart, Activity } from "lucide-react";
+import { AnalyticsPageSkeleton } from "@/components/common/PageSkeletons";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import { LanguageGrowth } from "@/components/analytics/LanguageGrowth";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Cell,
+} from "recharts";
+
+const pieColors = ["#2563eb", "#60a5fa", "#93c5fd", "#bfdbfe", "#1d4ed8"];
 
 export function Analytics() {
   const { data, isLoading, error } = useAnalytics("month");
 
-  // Show loading state
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-100">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading analytics...</p>
-          </div>
-        </div>
+        <AnalyticsPageSkeleton />
       </MainLayout>
     );
   }
 
-  // Show error state
-  if (error) {
+  if (error || !data) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-100">
-          <div className="text-center">
-            <span className="text-4xl mb-4 block">⚠️</span>
-            <p className="text-red-600 mb-2">Failed to load analytics</p>
-            <p className="text-gray-600 text-sm">{error}</p>
-          </div>
-        </div>
+        <div className="panel-surface p-8 text-center text-rose-600">{error ?? "Failed to load analytics"}</div>
       </MainLayout>
     );
   }
 
-  const metrics = [
-    {
-      title: "Total Growth",
-      value: data?.totalGrowth.value || "+0%",
-      change: data?.totalGrowth.change || 0,
-      trend: data?.totalGrowth.trend || ("stable" as const),
-      description: "Compared to last month",
-      icon: <TrendingUp className="w-5 h-5" />,
-    },
-    {
-      title: "Most Popular Language",
-      value: data?.topLanguage.name || "N/A",
-      trend: "stable" as const,
-      description: `${data?.topLanguage.percentage || 0}% of all repositories`,
-      icon: <BarChart3 className="w-5 h-5" />,
-    },
-    {
-      title: "Avg. Daily Stars",
-      value: data?.avgDailyStars.value || "0",
-      change: data?.avgDailyStars.change || 0,
-      trend:
-        (data?.avgDailyStars.change || 0) > 0
-          ? ("up" as const)
-          : ("stable" as const),
-      description: "Across all repositories",
-      icon: <Activity className="w-5 h-5" />,
-    },
-    {
-      title: "Active Communities",
-      value: String(data?.activeCommunities.count || 0),
-      change: data?.activeCommunities.change || 0,
-      trend:
-        (data?.activeCommunities.change || 0) > 0
-          ? ("up" as const)
-          : ("stable" as const),
-      description: "With 100+ members",
-      icon: <PieChart className="w-5 h-5" />,
-    },
+  const kpis = [
+    { label: "Total Growth", value: data.totalGrowth.value, caption: "Compared to last month" },
+    { label: "Top Language", value: data.topLanguage.name, caption: `${data.topLanguage.percentage}% share` },
+    { label: "Avg Daily Stars", value: data.avgDailyStars.value, caption: "Across active repositories" },
+    { label: "Active Communities", value: String(data.activeCommunities.count), caption: "High-engagement stories" },
   ];
 
   return (
     <MainLayout>
-      <div className="space-y-6 sm:space-y-8">
-        {/* Header */}
-        <div className="border-b border-gray-200 pb-4 sm:pb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Analytics
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            In-depth analysis of tech trends, language adoption, and community
-            insights
-          </p>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
-          {metrics.map((metric) => (
-            <MetricCard key={metric.title} {...metric} />
+      <div className="space-y-4">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {kpis.map((kpi) => (
+            <article key={kpi.label} className="kpi-tile">
+              <p className="text-sm text-slate-500">{kpi.label}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">{kpi.value}</p>
+              <p className="mt-1 text-xs text-slate-500">{kpi.caption}</p>
+            </article>
           ))}
-        </div>
+        </section>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-          {/* Activity Trend */}
-          <div className="lg:col-span-2">
-            <ChartCard
-              title="Activity Trend"
-              subtitle="Repository creation and updates over last 7 days"
-            >
-              <div className="h-64 flex items-end gap-1">
-                {(data?.activityData || []).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 group"
-                  >
-                    <div
-                      className="w-full bg-gray-900 rounded-t-sm transition-all duration-200 hover:bg-gray-700 cursor-pointer"
-                      style={{
-                        height: `${(item.repositories / 400) * 100}%`,
-                      }}
-                      title={`${item.repositories} repos, ${item.stories} stories`}
-                    />
-                    <span className="text-xs text-gray-500 font-medium">
-                      {item.date.split("-")[2]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex items-center justify-between text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-900 rounded-sm" />
-                  <span>Repositories</span>
-                </div>
-                <p className="text-gray-500">Last 7 days</p>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <ChartCard title="Activity Trend" subtitle="Repository and story activity over time">
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.activityData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "#64748b" }} width={34} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="repositories" stroke="#2563eb" strokeWidth={2.5} dot={false} />
+                    <Line type="monotone" dataKey="stories" stroke="#60a5fa" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </ChartCard>
           </div>
 
-          {/* Language Distribution Pie */}
-          <ChartCard
-            title="Language Distribution"
-            subtitle="Market share by adoption"
-          >
-            <div className="space-y-4">
-              {(data?.languageDistribution || []).map((lang) => (
-                <div key={lang.language} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">
-                      {lang.language}
-                    </span>
-                    <span className="text-xs font-semibold text-gray-700">
-                      {lang.percentage}%
-                    </span>
+          <ChartCard title="Language Distribution" subtitle="Share by repository volume">
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.languageDistribution}
+                    dataKey="percentage"
+                    nameKey="language"
+                    innerRadius={50}
+                    outerRadius={85}
+                  >
+                    {data.languageDistribution.map((entry, idx) => (
+                      <Cell key={entry.language} fill={pieColors[idx % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <ChartCard title="Monthly Growth" subtitle="Repository growth trajectory">
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.monthlyGrowth}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#64748b" }} />
+                  <YAxis tick={{ fontSize: 12, fill: "#64748b" }} width={34} />
+                  <Tooltip />
+                  <Bar dataKey="repos" fill="#2563eb" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Top Languages" subtitle="Current leaders by repository count">
+            <div className="space-y-3">
+              {data.topLanguages.slice(0, 5).map((language) => (
+                <div key={language.language}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{language.language}</span>
+                    <span className="text-slate-900">{language.repositories}</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="h-2 rounded-full bg-slate-100">
                     <div
-                      className="h-2 rounded-full transition-all"
-                      style={{
-                        width: `${lang.percentage}%`,
-                        backgroundColor: lang.color,
-                      }}
+                      className="h-2 rounded-full bg-blue-700"
+                      style={{ width: `${Math.min(100, language.repositories)}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
           </ChartCard>
-        </div>
+        </section>
 
-        {/* Growth Metrics Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-          <ChartCard title="Repository Growth" subtitle="Monthly trend">
-            <div className="space-y-3">
-              {(data?.monthlyGrowth || []).map((item) => (
-                <div
-                  key={item.month}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm font-medium text-gray-900 w-12">
-                    {item.month}
-                  </span>
-                  <div className="flex-1 mx-3 h-2 bg-gray-200 rounded-full">
-                    <div
-                      className="h-2 bg-green-600 rounded-full"
-                      style={{ width: `${(item.repos / 250) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-green-600 w-16 text-right">
-                    {item.change}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </ChartCard>
-
-          <ChartCard title="Stars Distribution" subtitle="Average by language">
-            <div className="space-y-3">
-              {(data?.topLanguages || []).slice(0, 3).map((item, idx) => (
-                <div
-                  key={item.language}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm font-medium text-gray-900 flex-1">
-                    {item.language}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-12 h-2 bg-gray-200 rounded-full">
-                      <div
-                        className="h-2 bg-yellow-500 rounded-full"
-                        style={{ width: `${((3 - idx) / 3) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-700 w-10 text-right">
-                      {item.stars}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ChartCard>
-
-          <ChartCard title="Top Contributors" subtitle="By activity">
-            <div className="space-y-3">
-              {[
-                {
-                  name: "Contributors",
-                  count: data?.activeCommunities.count || 0,
-                  trend: `+${data?.activeCommunities.change || 0}%`,
-                },
-                {
-                  name: "Repositories",
-                  count: data?.quickStats.totalRepositories || "0",
-                  trend: "+15%",
-                },
-                {
-                  name: "Languages",
-                  count: data?.quickStats.trackedLanguages || 0,
-                  trend: "+12%",
-                },
-              ].map((item) => (
-                <div
-                  key={item.name}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <p className="text-xs text-gray-600">{item.name}</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {typeof item.count === "number"
-                        ? item.count.toLocaleString()
-                        : item.count}
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-green-600">
-                    {item.trend}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </ChartCard>
-        </div>
-
-        {/* Detailed Languages Table */}
-        <ChartCard
-          title="Language Statistics"
-          subtitle="Comprehensive programming language metrics"
-        >
+        <ChartCard title="Language Statistics" subtitle="Detailed breakdown of language performance">
           <DataTable
             columns={[
-              {
-                header: "Rank",
-                key: "rank",
-                render: (value) => (
-                  <div className="text-sm font-semibold text-gray-900">
-                    #{value}
-                  </div>
-                ),
-                className: "w-12",
-              },
-              {
-                header: "Language",
-                key: "language",
-                render: (value) => (
-                  <div className="text-sm font-medium text-gray-900">
-                    {value}
-                  </div>
-                ),
-              },
-              {
-                header: "Repositories",
-                key: "repositories",
-                render: (value) => (
-                  <div className="text-sm text-gray-700 font-medium">
-                    {value}
-                  </div>
-                ),
-              },
-              {
-                header: "Total Stars",
-                key: "stars",
-                render: (value) => (
-                  <div className="text-sm text-gray-700 font-medium">
-                    {value}
-                  </div>
-                ),
-              },
-              {
-                header: "Percentage",
-                key: "percentage",
-                render: (value) => (
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-gray-900 h-2 rounded-full"
-                        style={{ width: `${value}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 w-10 text-right">
-                      {value}%
-                    </span>
-                  </div>
-                ),
-              },
-              {
-                header: "Trend",
-                key: "trend",
-                render: (value) => (
-                  <div className="text-sm font-semibold text-green-600">
-                    {value}
-                  </div>
-                ),
-                className: "text-right",
-              },
+              { header: "Rank", key: "rank" },
+              { header: "Language", key: "language" },
+              { header: "Repositories", key: "repositories" },
+              { header: "Stars", key: "stars" },
+              { header: "Percentage", key: "percentage", render: (value) => `${value}%` },
+              { header: "Trend", key: "trend" },
             ]}
-            data={data?.languageStats || []}
+            data={data.languageStats}
             rowKey="rank"
           />
         </ChartCard>
-
-        {/* Language Growth Trends */}
-        <LanguageGrowth days={7} limit={15} />
-
-        {/* Additional Insights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
-          <Card className="border border-gray-200 hover:shadow-md transition-shadow bg-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base sm:text-lg">
-                Key Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 font-bold mt-1">•</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {data?.topLanguage.name || "Top Language"} Dominance
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Leading with {data?.topLanguage.percentage || 0}% market
-                      share
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-blue-600 font-bold mt-1">•</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Repository Growth
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Consistent growth at {data?.totalGrowth.value || "0%"}{" "}
-                      across all communities
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 font-bold mt-1">•</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Community Engagement
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {data?.activeCommunities.count || 0} active communities
-                      with high engagement
-                    </p>
-                  </div>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-gray-200 hover:shadow-md transition-shadow bg-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base sm:text-lg">
-                Quick Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">
-                    Tracked Languages
-                  </span>
-                  <span className="text-lg font-bold text-gray-900">
-                    {data?.quickStats.trackedLanguages || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">
-                    Total Repositories
-                  </span>
-                  <span className="text-lg font-bold text-gray-900">
-                    {data?.quickStats.totalRepositories || "0"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Avg. Repository Age
-                  </span>
-                  <span className="text-lg font-bold text-gray-900">
-                    {data?.quickStats.avgRepoAge || "N/A"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </MainLayout>
   );

@@ -41,7 +41,7 @@ export const useAppStore = create<AppState>()(
           dateRange: 'today',
           sortBy: 'trending',
         },
-        isLoading: false,
+        isLoading: true,
         error: null,
       },
       
@@ -109,7 +109,7 @@ export const useAppStore = create<AppState>()(
       
       // Initial UI State
       ui: {
-        sidebarOpen: true,
+        sidebarOpen: false,
         theme: 'light',
       },
       

@@ -2,11 +2,12 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { FilterBar } from "@/components/trending/FilterBar";
 import { RepositoryCard } from "@/components/trending/RepositoryCard";
 import { StoryCard } from "@/components/trending/StoryCard";
-import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useTrending } from "@/hooks/useTrending";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Newspaper, Package, Search } from "lucide-react";
+import { TrendingPageSkeleton } from "@/components/common/PageSkeletons";
 
 export function Trending() {
   const {
@@ -27,52 +28,54 @@ export function Trending() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <TrendingPageSkeleton />
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
-      <div className="space-y-6 sm:space-y-8">
-        {/* Header */}
-        <div className="border-b border-gray-200 pb-4 sm:pb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Trending
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            Discover the most popular repositories and stories right now
-          </p>
-        </div>
+      <div className="space-y-4">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <article className="kpi-tile">
+            <p className="text-sm text-slate-500">Trending Repositories</p>
+            <p className="mt-1 text-3xl font-semibold text-slate-900">{repositories.length}</p>
+          </article>
+          <article className="kpi-tile">
+            <p className="text-sm text-slate-500">Top Stories</p>
+            <p className="mt-1 text-3xl font-semibold text-slate-900">{stories.length}</p>
+          </article>
+          <article className="kpi-tile">
+            <p className="text-sm text-slate-500">Source</p>
+            <p className="mt-1 text-3xl font-semibold capitalize text-slate-900">{filters.source}</p>
+          </article>
+        </section>
 
-        {/* Filters */}
-        <FilterBar
-          filters={filters}
-          onFilterChange={updateFilters}
-          languages={["JavaScript", "Python", "TypeScript", "Go", "Rust"]}
-        />
+        <section className="panel-surface p-4">
+          <FilterBar
+            filters={filters}
+            onFilterChange={updateFilters}
+            languages={["JavaScript", "Python", "TypeScript", "Go", "Rust"]}
+          />
+        </section>
 
-        {/* Content Tabs */}
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">
-              All
-            </TabsTrigger>
-            <TabsTrigger value="repositories" className="text-xs sm:text-sm">
-              Repos ({repositories.length})
-            </TabsTrigger>
-            <TabsTrigger value="stories" className="text-xs sm:text-sm">
-              Stories ({stories.length})
-            </TabsTrigger>
-          </TabsList>
+        <section className="panel-surface p-4">
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-lg bg-slate-100 p-1 sm:w-auto">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="repositories">Repos ({repositories.length})</TabsTrigger>
+              <TabsTrigger value="stories">Stories ({stories.length})</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="all" className="mt-6 space-y-8">
-            {isLoading ? (
-              <LoadingState type="card" count={6} />
-            ) : (
+            <TabsContent value="all" className="mt-4 space-y-8">
               <>
-                {/* Repositories Section */}
                 {repositories.length > 0 && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-                      🔥 Trending Repositories
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                    <h2 className="mb-3 text-lg font-semibold text-slate-900">Trending Repositories</h2>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {repositories.slice(0, 6).map((repo) => (
                         <RepositoryCard key={repo.id} repository={repo} />
                       ))}
@@ -80,13 +83,10 @@ export function Trending() {
                   </div>
                 )}
 
-                {/* Stories Section */}
                 {stories.length > 0 && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-                      📰 Top Stories
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+                    <h2 className="mb-3 text-lg font-semibold text-slate-900">Top Stories</h2>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       {stories.slice(0, 6).map((story) => (
                         <StoryCard key={story.id} story={story} />
                       ))}
@@ -98,49 +98,45 @@ export function Trending() {
                   <EmptyState
                     title="No trending items found"
                     description="Try adjusting your filters to see more results"
-                    icon="🔍"
+                    icon={<Search className="h-10 w-10" />}
                   />
                 )}
               </>
-            )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="repositories" className="mt-6">
-            {isLoading ? (
-              <LoadingState type="card" count={6} />
-            ) : repositories.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                {repositories.map((repo) => (
-                  <RepositoryCard key={repo.id} repository={repo} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title="No repositories found"
-                description="Try adjusting your filters"
-                icon="📦"
-              />
-            )}
-          </TabsContent>
+            <TabsContent value="repositories" className="mt-4">
+              {repositories.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {repositories.map((repo) => (
+                    <RepositoryCard key={repo.id} repository={repo} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No repositories found"
+                  description="Try adjusting your filters"
+                  icon={<Package className="h-10 w-10" />}
+                />
+              )}
+            </TabsContent>
 
-          <TabsContent value="stories" className="mt-6">
-            {isLoading ? (
-              <LoadingState type="list" count={6} />
-            ) : stories.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
-                {stories.map((story) => (
-                  <StoryCard key={story.id} story={story} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title="No stories found"
-                description="Try adjusting your filters"
-                icon="📰"
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="stories" className="mt-4">
+              {stories.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {stories.map((story) => (
+                    <StoryCard key={story.id} story={story} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No stories found"
+                  description="Try adjusting your filters"
+                  icon={<Newspaper className="h-10 w-10" />}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </section>
       </div>
     </MainLayout>
   );

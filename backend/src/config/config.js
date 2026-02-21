@@ -70,7 +70,9 @@ const config = {
   // Rate Limiting
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    maxRequests:
+      parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) ||
+      (process.env.NODE_ENV === "development" ? 10000 : 100), // Much higher limit for development
   },
 
   // Logging

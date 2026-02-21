@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { searchService } from '@/services/searchService';
 import { useDebounce } from './useDebounce';
@@ -7,13 +7,7 @@ export function useSearch() {
   const { search, setSearchQuery, setSearchFilters, setSearchResults } = useAppStore();
   const debouncedQuery = useDebounce(search.query, 500);
 
-  useEffect(() => {
-    if (debouncedQuery) {
-      performSearch();
-    }
-  }, [debouncedQuery, search.filters]);
-
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     if (!search.query) return;
 
     try {
@@ -29,7 +23,13 @@ export function useSearch() {
         error: error instanceof Error ? error.message : 'Search failed',
       });
     }
-  };
+  }, [search.filters, search.query, setSearchResults]);
+
+  useEffect(() => {
+    if (debouncedQuery) {
+      performSearch();
+    }
+  }, [debouncedQuery, performSearch]);
 
   const updateQuery = (query: string) => {
     setSearchQuery(query);
