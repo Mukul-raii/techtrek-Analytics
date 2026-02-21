@@ -22,7 +22,8 @@ exports.getAdminStats = catchAsync(async (req, res) => {
     const lastIngestion = await getLastIngestionInfo();
 
     // Calculate total data size
-    const totalItems = (githubStats?.count || 0) + (hackerNewsStats?.count || 0);
+    const totalItems =
+      (githubStats?.count || 0) + (hackerNewsStats?.count || 0);
     const totalStars = githubStats?.totalStars || 0;
     const totalPoints = hackerNewsStats?.totalPoints || 0;
 
@@ -45,7 +46,10 @@ exports.getAdminStats = catchAsync(async (req, res) => {
     });
   } catch (error) {
     logger.error("Error fetching admin stats:", error.message);
-    throw new ApiError(500, `Failed to fetch admin statistics: ${error.message}`);
+    throw new ApiError(
+      500,
+      `Failed to fetch admin statistics: ${error.message}`
+    );
   }
 });
 
@@ -86,7 +90,7 @@ exports.triggerIngestion = catchAsync(async (req, res) => {
 async function getLastIngestionInfo() {
   try {
     const logDir = path.join(__dirname, "../../logs/data_document");
-    
+
     if (!fs.existsSync(logDir)) {
       return {
         lastRun: null,
@@ -110,7 +114,9 @@ async function getLastIngestionInfo() {
     // Get the most recent file timestamp from filename
     const latestFile = jsonFiles[0];
     const timestamp = latestFile.split("_")[0];
-    const lastRun = new Date(timestamp.replace(/-/g, ":").replace("T", " ").replace("Z", ""));
+    const lastRun = new Date(
+      timestamp.replace(/-/g, ":").replace("T", " ").replace("Z", "")
+    );
 
     return {
       lastRun: lastRun.toISOString(),

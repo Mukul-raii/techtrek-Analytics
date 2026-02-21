@@ -80,6 +80,8 @@ app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/search", require("./routes/searchRoutes"));
 app.use("/api/ingest", require("./routes/ingestRoutes"));
 app.use("/api/health", require("./routes/healthRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/cron", require("./routes/cronRoutes"));
 
 // Welcome Route
 app.get("/", (req, res) => {
@@ -93,6 +95,8 @@ app.get("/", (req, res) => {
       search: "/api/search",
       ingest: "/api/ingest",
       health: "/api/health",
+      admin: "/api/admin",
+      cron: "/api/cron (Vercel only)",
     },
   });
 });

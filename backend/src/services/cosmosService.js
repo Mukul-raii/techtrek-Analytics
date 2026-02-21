@@ -653,6 +653,121 @@ class CosmosService {
 
     return sorted;
   }
+
+  // Admin: Get source statistics
+  async getSourceStats(source) {
+    if (!this.client) {
+      logger.warn("⚠️  Cosmos DB not connected - returning mock stats");
+      return {
+        source,
+        count: source === "github" ? 126 : 186,
+        totalStars: source === "github" ? 7758172 : null,
+        totalPoints: source === "hackernews" ? 40688 : null,
+        lastUpdated: new Date().toISOString(),
+      };
+    }
+
+    try {
+      const container =
+        source === "github"
+          ? this.containers.github
+          : this.containers.hackerNews;
+
+      // Get count
+      const countQuery = {
+        query: "SELECT VALUE COUNT(1) FROM c",
+      };
+      const { resources: countResult } = await container.items
+        .query(countQuery)
+        .fetchAll();
+      const count = countResult[0] || 0;
+
+      // Get aggregated stats
+      let stats = { source, count };
+
+      if (source === "github") {
+        const statsQuery = {
+          query:
+            "SELECT SUM(c.stars) as totalStars, SUM(c.forks) as totalForks FROM c",
+        };
+        const { resources: statsResult } = await container.items
+          .query(statsQuery)
+          .fetchAll();
+        stats = { ...stats, ...statsResult[0] };
+      } else {
+        const statsQuery = {
+          query:
+            "SELECT SUM(c.points) as totalPoints, SUM(c.comments) as totalComments FROM c",
+        };
+        const { resources: statsResult } = await container.items
+          .query(statsQuery)
+          .fetchAll();
+        stats = { ...stats, ...statsResult[0] };
+      }
+
+      stats.lastUpdated = new Date().toISOString();
+      return stats;
+    } catch (error) {
+      logger.error(`Error fetching ${source} stats:`, error.message);
+      throw error;
+    }
+  }
+
+  // Admin: Get detailed metrics
+  async getDetailedMetrics() {
+    if (!this.client) {
+      logger.warn("⚠️  Cosmos DB not connected - returning mock metrics");
+      return {
+        languages: [],
+        topRepositories: [],
+        topStories: [],
+        recentActivity: [],
+      };
+    }
+
+    try {
+      // Get language distribution from GitHub
+      const languageQuery = {
+        query: `
+          SELECT c.language, COUNT(1) as count, SUM(c.stars) as totalStars
+          FROM c 
+          WHERE IS_DEFINED(c.language) AND c.language != null
+          GROUP BY c.language
+          ORDER BY COUNT(1) DESC
+        `,
+      };
+
+      const { resources: languages } = await this.containers.github.items
+        .query(languageQuery)
+        .fetchAll();
+
+      // Get top repositories
+      const topReposQuery = {
+        query: "SELECT TOP 10 * FROM c ORDER BY c.stars DESC",
+      };
+      const { resources: topRepositories } = await this.containers.github.items
+        .query(topReposQuery)
+        .fetchAll();
+
+      // Get top stories
+      const topStoriesQuery = {
+        query: "SELECT TOP 10 * FROM c ORDER BY c.points DESC",
+      };
+      const { resources: topStories } = await this.containers.hackerNews.items
+        .query(topStoriesQuery)
+        .fetchAll();
+
+      return {
+        languages,
+        topRepositories,
+        topStories,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      logger.error("Error fetching detailed metrics:", error.message);
+      throw error;
+    }
+  }
 }
 
 const cosmosService = new CosmosService();

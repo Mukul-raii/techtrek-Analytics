@@ -19,6 +19,14 @@ class SchedulerService {
       return;
     }
 
+    // Disable node-cron scheduler on Vercel (use Vercel Cron Jobs instead)
+    if (process.env.VERCEL) {
+      logger.info(
+        "⏰ Running on Vercel - node-cron scheduler disabled. Using Vercel Cron Jobs."
+      );
+      return;
+    }
+
     // Only run scheduled jobs in production or if explicitly enabled
     const enableScheduler =
       config.nodeEnv === "production" ||

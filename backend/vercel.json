@@ -18,5 +18,23 @@
       "src": "/(.*)",
       "dest": "/src/server.js"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/github-ingestion",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/hackernews-ingestion",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/full-ingestion",
+      "schedule": "0 0,12 * * *"
+    },
+    {
+      "path": "/api/cron/sql-population",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
