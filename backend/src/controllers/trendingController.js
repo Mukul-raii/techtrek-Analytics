@@ -11,23 +11,34 @@ exports.getAllTrending = catchAsync(async (req, res) => {
     source,
     timeRange = "week",
     sort = "popularity",
+    enhanced = "true",
   } = req.query;
 
   logger.info(
-    `Fetching trending items - limit: ${limit}, source: ${source}, timeRange: ${timeRange}, sort: ${sort}`
+    `Fetching trending items - limit: ${limit}, source: ${source}, timeRange: ${timeRange}, sort: ${sort}, enhanced: ${enhanced}`
   );
 
-  const items = await cosmosService.getTrendingItems({
-    limit: parseInt(limit),
-    source,
-    timeRange,
-    sort,
-  });
+  // Use enhanced trending with momentum and engagement metrics
+  const useEnhanced = enhanced === "true";
+  const items = useEnhanced
+    ? await cosmosService.getEnhancedTrendingItems({
+        limit: parseInt(limit),
+        source,
+        timeRange,
+        sort,
+      })
+    : await cosmosService.getTrendingItems({
+        limit: parseInt(limit),
+        source,
+        timeRange,
+        sort,
+      });
 
   res.status(200).json({
     status: "success",
     count: items.length,
     timeRange,
+    enhanced: useEnhanced,
     data: items,
   });
 });
@@ -35,7 +46,12 @@ exports.getAllTrending = catchAsync(async (req, res) => {
 // Get trending by specific source
 exports.getTrendingBySource = catchAsync(async (req, res) => {
   const { source } = req.params;
-  const { limit = 50, timeRange = "week", sort = "popularity" } = req.query;
+  const {
+    limit = 50,
+    timeRange = "week",
+    sort = "popularity",
+    enhanced = "true",
+  } = req.query;
 
   const validSources = ["github", "hackernews"];
   if (!validSources.includes(source.toLowerCase())) {
@@ -46,18 +62,28 @@ exports.getTrendingBySource = catchAsync(async (req, res) => {
     `Fetching trending items for source: ${source}, timeRange: ${timeRange}`
   );
 
-  const items = await cosmosService.getTrendingItems({
-    limit: parseInt(limit),
-    source: source.toLowerCase(),
-    timeRange,
-    sort,
-  });
+  // Use enhanced trending with momentum and engagement metrics
+  const useEnhanced = enhanced === "true";
+  const items = useEnhanced
+    ? await cosmosService.getEnhancedTrendingItems({
+        limit: parseInt(limit),
+        source: source.toLowerCase(),
+        timeRange,
+        sort,
+      })
+    : await cosmosService.getTrendingItems({
+        limit: parseInt(limit),
+        source: source.toLowerCase(),
+        timeRange,
+        sort,
+      });
 
   res.status(200).json({
     status: "success",
     source,
     timeRange,
     count: items.length,
+    enhanced: useEnhanced,
     data: items,
   });
 });

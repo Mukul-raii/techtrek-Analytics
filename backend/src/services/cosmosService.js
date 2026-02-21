@@ -512,7 +512,149 @@ class CosmosService {
 
     return mockItems.slice(0, limit);
   }
+
+  /**
+   * Get enhanced analytics with period comparison and derived metrics
+   */
+  async getEnhancedAnalytics(range = "month", compare = false) {
+    const analyticsMetrics = require("./analyticsMetricsService");
+
+    // Get current period data
+    const currentData = await this.getDetailedAnalytics(range);
+
+    // Get all items for additional calculations
+    let allItems = [];
+    if (this.client) {
+      try {
+        const [githubData, hnData] = await Promise.all([
+          this.containers.github.items
+            .query({ query: "SELECT * FROM c" })
+            .fetchAll(),
+          this.containers.hackerNews.items
+            .query({ query: "SELECT * FROM c" })
+            .fetchAll(),
+        ]);
+
+        allItems = [
+          ...githubData.resources.map((item) => ({
+            ...item,
+            source: "github",
+          })),
+          ...hnData.resources.map((item) => ({
+            ...item,
+            source: "hackernews",
+          })),
+        ];
+      } catch (error) {
+        logger.error("Error fetching all items:", error.message);
+      }
+    }
+
+    // Calculate derived metrics
+    const freshnessIndex = analyticsMetrics.calculateFreshnessIndex(allItems);
+    const healthScore = analyticsMetrics.calculateHealthScore({
+      ...currentData,
+      items: allItems,
+    });
+    const languageDiversity = analyticsMetrics.calculateLanguageDiversity(
+      currentData.languageStats
+    );
+    const velocityLeaders = analyticsMetrics.findVelocityLeaders(allItems, 3);
+
+    // Enhanced response
+    const enhancedData = {
+      ...currentData,
+      metrics: {
+        freshnessIndex,
+        healthScore,
+        languageDiversity,
+        velocityLeaders,
+      },
+    };
+
+    // Add period comparison if requested
+    if (compare) {
+      // Mock previous period data for now
+      // In production, query data from previous time period
+      const previousData = {
+        totalItems: Math.floor(currentData.totalItems * 0.9),
+        avgPopularity: Math.floor(currentData.avgPopularity * 0.92),
+        githubStats: {
+          totalStars: Math.floor(
+            (currentData.githubStats?.totalStars || 0) * 0.88
+          ),
+        },
+        hackerNewsStats: {
+          totalPoints: Math.floor(
+            (currentData.hackerNewsStats?.totalPoints || 0) * 0.91
+          ),
+        },
+        languageStats: currentData.languageStats.map((lang) => ({
+          ...lang,
+          count: Math.floor(lang.count * 0.9),
+        })),
+      };
+
+      enhancedData.comparison = analyticsMetrics.calculatePeriodComparison(
+        currentData,
+        previousData
+      );
+
+      enhancedData.languageGrowth = analyticsMetrics.analyzeLanguageGrowth(
+        currentData.languageStats,
+        previousData.languageStats
+      );
+    }
+
+    return enhancedData;
+  }
+
+  /**
+   * Get trending items with enhanced metrics (momentum, engagement, etc.)
+   */
+  async getEnhancedTrendingItems(filters) {
+    const analyticsMetrics = require("./analyticsMetricsService");
+
+    // Get base trending items
+    const items = await this.getTrendingItems(filters);
+
+    // Enhance each item with derived metrics
+    const enhancedItems = items.map((item) => {
+      const momentum = analyticsMetrics.calculateMomentumScore(item);
+      const engagementRate = analyticsMetrics.calculateEngagementRate(item);
+      const engagementScore = analyticsMetrics.calculateEngagementScore(item);
+      const badge = analyticsMetrics.getMomentumBadge(momentum.score);
+      const ageInDays = analyticsMetrics.getAgeInDays(item);
+
+      const enhanced = {
+        ...item,
+        momentum,
+        engagement: {
+          rate: Math.round(engagementRate * 100) / 100,
+          score: Math.round(engagementScore * 10) / 10,
+        },
+        badge,
+        ageInDays,
+        recency: ageInDays < 1 ? "Today" : `${ageInDays}d ago`,
+      };
+
+      // Add virality index for HackerNews items
+      if (item.source === "hackernews") {
+        enhanced.viralityIndex = analyticsMetrics.calculateViralityIndex(item);
+      }
+
+      return enhanced;
+    });
+
+    // Sort by momentum score by default
+    const sorted = enhancedItems.sort(
+      (a, b) => b.momentum.score - a.momentum.score
+    );
+
+    return sorted;
+  }
 }
 
 const cosmosService = new CosmosService();
 module.exports = cosmosService;
+

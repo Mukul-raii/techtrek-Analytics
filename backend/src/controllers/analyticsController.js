@@ -6,12 +6,18 @@ const logger = require("../utils/logger");
 
 // Get overall analytics (using Cosmos DB for real data)
 exports.getOverallAnalytics = catchAsync(async (req, res) => {
-  const { range = "month" } = req.query;
+  const { range = "month", compare = "false" } = req.query;
+  const includeComparison = compare === "true";
 
-  logger.info(`Fetching overall analytics - range: ${range}`);
+  logger.info(
+    `Fetching overall analytics - range: ${range}, compare: ${includeComparison}`
+  );
 
-  // Use Cosmos DB for real-time data instead of SQL
-  const analytics = await cosmosService.getDetailedAnalytics(range);
+  // Use enhanced analytics with period comparison and derived metrics
+  const analytics = await cosmosService.getEnhancedAnalytics(
+    range,
+    includeComparison
+  );
 
   res.status(200).json({
     status: "success",
