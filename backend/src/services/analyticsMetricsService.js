@@ -178,9 +178,11 @@ class AnalyticsMetricsService {
         this.calculateDiscussionQuality(analytics) * 0.2;
 
       // Freshness (10%): Percentage of recent content
-      const freshness = this.calculateFreshnessIndex(analytics.items || []) * 0.1;
+      const freshness =
+        this.calculateFreshnessIndex(analytics.items || []) * 0.1;
 
-      const totalScore = activityRate + engagementScore + discussionQuality + freshness;
+      const totalScore =
+        activityRate + engagementScore + discussionQuality + freshness;
 
       return {
         score: Math.round(totalScore * 10) / 10,
@@ -233,10 +235,7 @@ class AnalyticsMetricsService {
   calculateLanguageDiversity(languageStats) {
     if (!languageStats || languageStats.length === 0) return 0;
 
-    const totalCount = languageStats.reduce(
-      (sum, lang) => sum + lang.count,
-      0
-    );
+    const totalCount = languageStats.reduce((sum, lang) => sum + lang.count, 0);
     if (totalCount === 0) return 0;
 
     // Calculate Shannon entropy
@@ -318,7 +317,8 @@ class AnalyticsMetricsService {
    * Get momentum badge based on score
    */
   getMomentumBadge(score) {
-    if (score >= 80) return { type: "explosive", emoji: "🔥", label: "Explosive" };
+    if (score >= 80)
+      return { type: "explosive", emoji: "🔥", label: "Explosive" };
     if (score >= 60) return { type: "rising", emoji: "⚡", label: "Rising" };
     if (score >= 40) return { type: "steady", emoji: "📈", label: "Steady" };
     if (score >= 20) return { type: "solid", emoji: "💎", label: "Solid" };

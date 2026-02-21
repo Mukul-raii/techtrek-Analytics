@@ -657,4 +657,3 @@ class CosmosService {
 
 const cosmosService = new CosmosService();
 module.exports = cosmosService;
-
