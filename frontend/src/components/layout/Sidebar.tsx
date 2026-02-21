@@ -38,11 +38,6 @@ const sections: ShellSidebarSection[] = [
         route: "/search",
         icon: <Search className="h-4 w-4" />,
       },
-      {
-        label: "Admin",
-        route: "/admin",
-        icon: <Settings className="h-4 w-4" />,
-      },
     ],
   },
 ];

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { RefreshCw, Database, Clock, TrendingUp, Server } from "lucide-react";
+import { useAdminStats } from "@/hooks/queries/useAdmin";
 
 interface AdminStats {
   overview: {
@@ -38,28 +38,9 @@ interface AdminStats {
 }
 
 export default function Admin() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAdminStats = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("http://localhost:5000/api/admin/stats");
-      if (!response.ok) throw new Error("Failed to fetch admin stats");
-      const data = await response.json();
-      setStats(data.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAdminStats();
-  }, []);
+  const { data, isLoading, error, refetch } = useAdminStats();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stats = (data as any)?.data as AdminStats | undefined;
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num);
@@ -83,7 +64,7 @@ export default function Admin() {
     return "< 1h ago";
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
         <div className="max-w-7xl mx-auto">
@@ -103,13 +84,12 @@ export default function Admin() {
             <h3 className="text-red-800 dark:text-red-200 font-semibold mb-2">
               Error Loading Admin Stats
             </h3>
-            <p className="text-red-600 dark:text-red-300">{error}</p>
+            <p className="text-red-600 dark:text-red-300">{error.message}</p>
           </div>
         </div>
       </div>
     );
   }
-
   if (!stats) return null;
 
   return (
@@ -126,7 +106,7 @@ export default function Admin() {
             </p>
           </div>
           <button
-            onClick={fetchAdminStats}
+            onClick={() => refetch()}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />

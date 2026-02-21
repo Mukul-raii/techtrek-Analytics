@@ -3,13 +3,31 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useSearch } from "@/hooks/useSearch";
+import { useSearch } from "@/hooks/queries/useSearch";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Search as SearchIcon, Sparkles } from "lucide-react";
+import { useState } from "react";
 
 export function Search() {
-  const { query, results, isSearching, updateQuery } = useSearch();
+  const [query, setQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: response, isLoading } = useSearch({
+    q: searchQuery,
+    limit: 20,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results = (response as any)?.data || [];
+  const isSearching = isLoading;
+
+  const updateQuery = (newQuery: string) => {
+    setQuery(newQuery);
+    if (newQuery.length >= 2) {
+      setSearchQuery(newQuery);
+    }
+  };
 
   const quickSuggestions = [
     "React",
@@ -35,7 +53,9 @@ export function Search() {
                   className="h-11 border-slate-200 bg-slate-50 pl-9"
                 />
               </div>
-              <Button className="h-11 rounded-lg bg-blue-700 px-6 text-white hover:bg-blue-600">Search</Button>
+              <Button className="h-11 rounded-lg bg-blue-700 px-6 text-white hover:bg-blue-600">
+                Search
+              </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -64,49 +84,76 @@ export function Search() {
               {results.length} Result{results.length !== 1 ? "s" : ""} found
             </h2>
 
-            {results.map((result) => (
-              <Card
-                key={result.id}
-                className="rounded-xl border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md"
-              >
-                <CardContent className="p-5">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
-                          {result.type}
-                        </Badge>
-                        {result.metadata.language ? (
-                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                            {result.metadata.language}
+            {results.map(
+              (result: {
+                id: string;
+                type: string;
+                title?: string;
+                repository?: string;
+                description: string;
+                url: string;
+                metadata: {
+                  language?: string;
+                  author: string;
+                  stars?: number;
+                  score?: number;
+                  date: string;
+                };
+              }) => (
+                <Card
+                  key={result.id}
+                  className="rounded-xl border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md"
+                >
+                  <CardContent className="p-5">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="border-slate-200 bg-slate-50 text-slate-600"
+                          >
+                            {result.type}
                           </Badge>
-                        ) : null}
+                          {result.metadata.language ? (
+                            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                              {result.metadata.language}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <a
+                          href={result.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-blue-700 hover:text-blue-600"
+                        >
+                          View →
+                        </a>
                       </div>
-                      <a
-                        href={result.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm font-semibold text-blue-700 hover:text-blue-600"
-                      >
-                        View →
-                      </a>
-                    </div>
 
-                    <div>
-                      <h3 className="text-base font-semibold text-slate-900">{result.title}</h3>
-                      <p className="mt-1 text-sm text-slate-500">{result.description}</p>
-                    </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">
+                          {result.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {result.description}
+                        </p>
+                      </div>
 
-                    <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                      <span>Author: {result.metadata.author}</span>
-                      {result.metadata.stars ? <span>Stars: {result.metadata.stars}</span> : null}
-                      {result.metadata.score ? <span>Score: {result.metadata.score}</span> : null}
-                      <span>{result.metadata.date}</span>
+                      <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                        <span>Author: {result.metadata.author}</span>
+                        {result.metadata.stars ? (
+                          <span>Stars: {result.metadata.stars}</span>
+                        ) : null}
+                        {result.metadata.score ? (
+                          <span>Score: {result.metadata.score}</span>
+                        ) : null}
+                        <span>{result.metadata.date}</span>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            )}
           </section>
         ) : query ? (
           <EmptyState
