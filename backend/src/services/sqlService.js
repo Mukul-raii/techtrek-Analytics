@@ -378,6 +378,44 @@ class SQLService {
     ];
   }
 
+  // Admin: Get table statistics
+  async getTableStats() {
+    if (!this.pool) {
+      logger.warn("⚠️  SQL not connected - returning mock table stats");
+      return {
+        enabled: false,
+        tables: [],
+        message: "SQL Database not configured",
+      };
+    }
+
+    try {
+      const result = await this.pool.request().query(`
+        SELECT 
+          t.name AS tableName,
+          SUM(p.rows) AS rowCount
+        FROM sys.tables t
+        INNER JOIN sys.partitions p ON t.object_id = p.object_id
+        WHERE p.index_id IN (0, 1)
+        GROUP BY t.name
+        ORDER BY t.name
+      `);
+
+      return {
+        enabled: true,
+        tables: result.recordset,
+        lastChecked: new Date().toISOString(),
+      };
+    } catch (error) {
+      logger.error("Error fetching table stats:", error.message);
+      return {
+        enabled: true,
+        tables: [],
+        error: error.message,
+      };
+    }
+  }
+
   async close() {
     if (this.pool) {
       await this.pool.close();

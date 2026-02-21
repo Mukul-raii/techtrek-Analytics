@@ -5,6 +5,7 @@ import {
   Search,
   CheckCircle2,
   Flame,
+  Settings,
 } from "lucide-react";
 import type { ShellSidebarSection } from "@/types/uiTheme";
 
@@ -36,6 +37,11 @@ const sections: ShellSidebarSection[] = [
         label: "Search",
         route: "/search",
         icon: <Search className="h-4 w-4" />,
+      },
+      {
+        label: "Admin",
+        route: "/admin",
+        icon: <Settings className="h-4 w-4" />,
       },
     ],
   },
