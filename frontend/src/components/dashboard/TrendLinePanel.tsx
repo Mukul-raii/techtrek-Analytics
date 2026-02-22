@@ -17,16 +17,24 @@ interface TrendPoint {
 
 interface TrendLinePanelProps {
   data: TrendPoint[];
+  sourceBreakdownAvailable?: boolean;
 }
 
 const formatDateLabel = (date: string) =>
   new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-export function TrendLinePanel({ data }: TrendLinePanelProps) {
+export function TrendLinePanel({
+  data,
+  sourceBreakdownAvailable = true,
+}: TrendLinePanelProps) {
   return (
     <ChartCard
       title="Activity Trend"
-      subtitle="Last 7 days activity across all sources"
+      subtitle={
+        sourceBreakdownAvailable
+          ? "Last 7 days activity across all sources"
+          : "Last 7 days repository activity (story split unavailable)"
+      }
       empty={!data.length}
       emptyLabel="No activity data available"
     >
@@ -45,14 +53,16 @@ export function TrendLinePanel({ data }: TrendLinePanelProps) {
               strokeWidth={2.5}
               dot={false}
             />
-            <Line
-              type="monotone"
-              dataKey="stories"
-              name="Stories"
-              stroke="#93c5fd"
-              strokeWidth={2}
-              dot={false}
-            />
+            {sourceBreakdownAvailable ? (
+              <Line
+                type="monotone"
+                dataKey="stories"
+                name="Stories"
+                stroke="#93c5fd"
+                strokeWidth={2}
+                dot={false}
+              />
+            ) : null}
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -77,7 +77,7 @@ export function Dashboard() {
     );
   }, [analyticsData]);
 
-  const activityData = useMemo(() => {
+  const activity = useMemo(() => {
     return transformDailyMetrics(dailyMetrics);
   }, [dailyMetrics]);
 
@@ -150,11 +150,14 @@ export function Dashboard() {
 
               <section className="grid grid-cols-1 gap-4 xl:grid-cols-5">
                 <div className="xl:col-span-3">
-                  <TrendLinePanel data={activityData} />
+                  <TrendLinePanel
+                    data={activity.points}
+                    sourceBreakdownAvailable={activity.hasSourceBreakdown}
+                  />
                 </div>
                 <div className="xl:col-span-2">
                   <EfficiencyBarPanel
-                    data={activityData.map((item) => ({
+                    data={activity.points.map((item) => ({
                       date: item.date,
                       repositories: item.repositories,
                     }))}
@@ -189,37 +192,49 @@ export function Dashboard() {
 interface DailyMetric {
   date: string;
   source?: string;
-  itemCount?: number;
   item_count?: number;
 }
 
 function transformDailyMetrics(metrics: DailyMetric[]) {
-  if (!metrics.length) return [];
+  if (!metrics.length) {
+    return {
+      points: [],
+      hasSourceBreakdown: false,
+    };
+  }
 
   const byDate = new Map<string, { repositories: number; stories: number }>();
+  let hasSourceBreakdown = false;
 
   metrics.forEach((metric) => {
     const date = String(metric.date).split("T")[0];
-    const count = metric.itemCount ?? metric.item_count ?? 0;
+    const count = metric.item_count ?? 0;
     const existing = byDate.get(date) ?? { repositories: 0, stories: 0 };
 
     if (metric.source === "github") {
       existing.repositories += count;
+      hasSourceBreakdown = true;
     } else if (metric.source === "hackernews") {
       existing.stories += count;
+      hasSourceBreakdown = true;
     } else {
-      // If source is unavailable, keep chart useful by plotting totals as repository activity.
+      // Aggregate-only rows can't be split by source; keep only repository activity chart meaningful.
       existing.repositories += count;
     }
 
     byDate.set(date, existing);
   });
 
-  return Array.from(byDate.entries())
+  const points = Array.from(byDate.entries())
     .map(([date, values]) => ({
       date,
       repositories: values.repositories,
       stories: values.stories,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    points,
+    hasSourceBreakdown,
+  };
 }

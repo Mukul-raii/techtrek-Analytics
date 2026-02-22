@@ -44,12 +44,13 @@ export function Analytics() {
     const totalStories = data.hackerNewsStats?.totalStories || 0;
     const avgStars = data.githubStats?.avgStars || 0;
 
-    const activityData = transformDailyMetrics(monthlyDailyMetrics);
+    const activity = transformDailyMetrics(monthlyDailyMetrics);
     const monthlyGrowth = aggregateMonthlyGrowth(yearlyDailyMetrics, 6);
 
     return {
       ...data,
-      activityData,
+      activityData: activity.points,
+      hasSourceBreakdown: activity.hasSourceBreakdown,
       monthlyGrowth,
       languageDistribution: data.languageStats || [],
       topLanguages: (data.languageStats || []).map(
@@ -127,7 +128,13 @@ export function Analytics() {
           <div className="xl:col-span-2">
             <ChartCard
               title="Activity Trend"
-              subtitle="Repository and story activity over time"
+              subtitle={
+                transformedData.hasSourceBreakdown
+                  ? "Repository and story activity over time"
+                  : "Repository activity over time (story split unavailable)"
+              }
+              empty={!transformedData.activityData.length}
+              emptyLabel="No activity data available"
             >
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -149,13 +156,15 @@ export function Analytics() {
                       strokeWidth={2.5}
                       dot={false}
                     />
-                    <Line
-                      type="monotone"
-                      dataKey="stories"
-                      stroke="#60a5fa"
-                      strokeWidth={2}
-                      dot={false}
-                    />
+                    {transformedData.hasSourceBreakdown ? (
+                      <Line
+                        type="monotone"
+                        dataKey="stories"
+                        stroke="#60a5fa"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    ) : null}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -199,6 +208,8 @@ export function Analytics() {
           <ChartCard
             title="Monthly Growth"
             subtitle="Repository growth trajectory"
+            empty={!transformedData.monthlyGrowth.length}
+            emptyLabel="No monthly growth data available"
           >
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -293,24 +304,31 @@ export function Analytics() {
 interface DailyMetric {
   date: string;
   source?: string;
-  itemCount?: number;
   item_count?: number;
 }
 
 function transformDailyMetrics(metrics: DailyMetric[]) {
-  if (!metrics.length) return [];
+  if (!metrics.length) {
+    return {
+      points: [],
+      hasSourceBreakdown: false,
+    };
+  }
 
   const byDate = new Map<string, { repositories: number; stories: number }>();
+  let hasSourceBreakdown = false;
 
   metrics.forEach((metric) => {
     const date = String(metric.date).split("T")[0];
-    const count = metric.itemCount ?? metric.item_count ?? 0;
+    const count = metric.item_count ?? 0;
     const existing = byDate.get(date) ?? { repositories: 0, stories: 0 };
 
     if (metric.source === "github") {
       existing.repositories += count;
+      hasSourceBreakdown = true;
     } else if (metric.source === "hackernews") {
       existing.stories += count;
+      hasSourceBreakdown = true;
     } else {
       existing.repositories += count;
     }
@@ -318,13 +336,18 @@ function transformDailyMetrics(metrics: DailyMetric[]) {
     byDate.set(date, existing);
   });
 
-  return Array.from(byDate.entries())
+  const points = Array.from(byDate.entries())
     .map(([date, values]) => ({
       date,
       repositories: values.repositories,
       stories: values.stories,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    points,
+    hasSourceBreakdown,
+  };
 }
 
 function aggregateMonthlyGrowth(metrics: DailyMetric[], monthsToShow = 6) {
@@ -340,7 +363,7 @@ function aggregateMonthlyGrowth(metrics: DailyMetric[], monthsToShow = 6) {
       2,
       "0"
     )}`;
-    const count = metric.itemCount ?? metric.item_count ?? 0;
+    const count = metric.item_count ?? 0;
 
     byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + count);
   });
