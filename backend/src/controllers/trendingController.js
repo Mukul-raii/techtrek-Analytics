@@ -8,9 +8,14 @@ const logger = require("../utils/logger");
 exports.getAllTrending = catchAsync(async (req, res) => {
   const {
     limit = 50,
+    page = 1,
+    pageSize = 50,
     source,
     timeRange = "week",
     sort = "popularity",
+    language,
+    minStars,
+    minPoints,
     enhanced = "true",
   } = req.query;
 
@@ -20,26 +25,51 @@ exports.getAllTrending = catchAsync(async (req, res) => {
 
   // Use enhanced trending with momentum and engagement metrics
   const useEnhanced = enhanced === "true";
+  const parsedPage = Math.max(parseInt(page) || 1, 1);
+  const parsedPageSize = Math.min(Math.max(parseInt(pageSize) || 50, 1), 100);
+  const parsedLimit = parseInt(limit) || parsedPageSize;
+
   const items = useEnhanced
     ? await cosmosService.getEnhancedTrendingItems({
-        limit: parseInt(limit),
+        limit: parsedLimit,
+        page: parsedPage,
+        pageSize: parsedPageSize,
         source,
         timeRange,
         sort,
+        language,
+        minStars: minStars ? parseInt(minStars) : undefined,
+        minPoints: minPoints ? parseInt(minPoints) : undefined,
       })
     : await cosmosService.getTrendingItems({
-        limit: parseInt(limit),
+        limit: parsedLimit,
+        page: parsedPage,
+        pageSize: parsedPageSize,
         source,
         timeRange,
         sort,
+        language,
+        minStars: minStars ? parseInt(minStars) : undefined,
+        minPoints: minPoints ? parseInt(minPoints) : undefined,
       });
+
+  const data = Array.isArray(items) ? items : items.data || [];
+  const total = Array.isArray(items)
+    ? data.length
+    : typeof items.total === "number"
+      ? items.total
+      : data.length;
 
   res.status(200).json({
     status: "success",
-    count: items.length,
+    count: data.length,
+    total,
+    page: parsedPage,
+    pageSize: parsedPageSize,
+    totalPages: Math.max(Math.ceil(total / parsedPageSize), 1),
     timeRange,
     enhanced: useEnhanced,
-    data: items,
+    data,
   });
 });
 
@@ -48,8 +78,13 @@ exports.getTrendingBySource = catchAsync(async (req, res) => {
   const { source } = req.params;
   const {
     limit = 50,
+    page = 1,
+    pageSize = 50,
     timeRange = "week",
     sort = "popularity",
+    language,
+    minStars,
+    minPoints,
     enhanced = "true",
   } = req.query;
 
@@ -57,6 +92,23 @@ exports.getTrendingBySource = catchAsync(async (req, res) => {
   if (!validSources.includes(source.toLowerCase())) {
     throw new ApiError(400, "Invalid source. Must be github or hackernews");
   }
+  const normalizedSource = source.toLowerCase();
+  const validSortsBySource = {
+    github: ["popularity", "recent", "stars", "stars_asc"],
+    hackernews: ["popularity", "recent", "score", "score_asc"],
+  };
+  if (!validSortsBySource[normalizedSource].includes(sort)) {
+    throw new ApiError(
+      400,
+      `Invalid sort for ${normalizedSource}. Allowed: ${validSortsBySource[
+        normalizedSource
+      ].join(", ")}`
+    );
+  }
+
+  const parsedPage = Math.max(parseInt(page) || 1, 1);
+  const parsedPageSize = Math.min(Math.max(parseInt(pageSize) || 50, 1), 100);
+  const parsedLimit = parseInt(limit) || parsedPageSize;
 
   logger.info(
     `Fetching trending items for source: ${source}, timeRange: ${timeRange}`
@@ -66,25 +118,45 @@ exports.getTrendingBySource = catchAsync(async (req, res) => {
   const useEnhanced = enhanced === "true";
   const items = useEnhanced
     ? await cosmosService.getEnhancedTrendingItems({
-        limit: parseInt(limit),
-        source: source.toLowerCase(),
+        limit: parsedLimit,
+        page: parsedPage,
+        pageSize: parsedPageSize,
+        source: normalizedSource,
         timeRange,
         sort,
+        language,
+        minStars: minStars ? parseInt(minStars) : undefined,
+        minPoints: minPoints ? parseInt(minPoints) : undefined,
       })
     : await cosmosService.getTrendingItems({
-        limit: parseInt(limit),
-        source: source.toLowerCase(),
+        limit: parsedLimit,
+        page: parsedPage,
+        pageSize: parsedPageSize,
+        source: normalizedSource,
         timeRange,
         sort,
+        language,
+        minStars: minStars ? parseInt(minStars) : undefined,
+        minPoints: minPoints ? parseInt(minPoints) : undefined,
       });
+  const data = Array.isArray(items) ? items : items.data || [];
+  const total = Array.isArray(items)
+    ? data.length
+    : typeof items.total === "number"
+      ? items.total
+      : data.length;
 
   res.status(200).json({
     status: "success",
-    source,
+    source: normalizedSource,
     timeRange,
-    count: items.length,
+    count: data.length,
+    total,
+    page: parsedPage,
+    pageSize: parsedPageSize,
+    totalPages: Math.max(Math.ceil(total / parsedPageSize), 1),
     enhanced: useEnhanced,
-    data: items,
+    data,
   });
 });
 

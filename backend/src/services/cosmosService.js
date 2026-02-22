@@ -74,27 +74,74 @@ class CosmosService {
     }
 
     try {
-      const { limit, source, timeRange = "week", sort } = filters;
+      const {
+        limit = 50,
+        page = 1,
+        pageSize = 50,
+        source,
+        timeRange = "week",
+        sort = "popularity",
+        language,
+        minStars,
+        minPoints,
+      } = filters;
+      const safePage = Math.max(parseInt(page) || 1, 1);
+      const safePageSize = Math.min(Math.max(parseInt(pageSize) || 50, 1), 100);
+      const safeLimit = parseInt(limit) || safePageSize;
+      const offset = (safePage - 1) * safePageSize;
 
       // Calculate date filters based on time range
-      // Note: Only filter if createdAt field exists in the data
-      let dateFilter = "";
+      let dateFilter = null;
       if (timeRange === "today" || timeRange === "daily") {
-        const yesterday = new Date(
-          Date.now() - 24 * 60 * 60 * 1000
-        ).toISOString();
-        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${yesterday}")`;
+        dateFilter = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       } else if (timeRange === "week" || timeRange === "weekly") {
-        const lastWeek = new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        ).toISOString();
-        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${lastWeek}")`;
+        dateFilter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       } else if (timeRange === "month" || timeRange === "monthly") {
-        const lastMonth = new Date(
+        dateFilter = new Date(
           Date.now() - 30 * 24 * 60 * 60 * 1000
         ).toISOString();
-        dateFilter = `AND (NOT IS_DEFINED(c.createdAt) OR c.createdAt > "${lastMonth}")`;
       }
+
+      const getOrderBy = (selectedSource) => {
+        if (selectedSource === "github") {
+          if (sort === "recent") return { field: "c.createdAt", direction: "DESC" };
+          if (sort === "stars_asc") return { field: "c.stars", direction: "ASC" };
+          return { field: "c.stars", direction: "DESC" };
+        }
+        if (sort === "recent") return { field: "c.createdAt", direction: "DESC" };
+        if (sort === "score_asc") return { field: "c.points", direction: "ASC" };
+        return { field: "c.points", direction: "DESC" };
+      };
+
+      const buildWhereSpec = (selectedSource) => {
+        const clauses = ["1=1"];
+        const parameters = [];
+
+        if (dateFilter) {
+          clauses.push(
+            "(NOT IS_DEFINED(c.createdAt) OR c.createdAt > @sinceDate)"
+          );
+          parameters.push({ name: "@sinceDate", value: dateFilter });
+        }
+
+        if (selectedSource === "github") {
+          if (typeof minStars === "number") {
+            clauses.push("c.stars >= @minStars");
+            parameters.push({ name: "@minStars", value: minStars });
+          }
+          if (language) {
+            clauses.push("c.language = @language");
+            parameters.push({ name: "@language", value: language });
+          }
+        }
+
+        if (selectedSource === "hackernews" && typeof minPoints === "number") {
+          clauses.push("c.points >= @minPoints");
+          parameters.push({ name: "@minPoints", value: minPoints });
+        }
+
+        return { whereClause: clauses.join(" AND "), parameters };
+      };
 
       let container;
       if (source === "github") {
@@ -104,37 +151,127 @@ class CosmosService {
       }
 
       if (container) {
-        // Use single ORDER BY field to avoid composite index requirement
-        const orderByField = source === "github" ? "c.stars" : "c.points";
-        const querySpec = {
-          query: `SELECT TOP @limit * FROM c WHERE 1=1 ${dateFilter} ORDER BY ${orderByField} DESC`,
-          parameters: [{ name: "@limit", value: limit }],
+        const { whereClause, parameters } = buildWhereSpec(source);
+        const { field, direction } = getOrderBy(source);
+
+        const countQuery = {
+          query: `SELECT VALUE COUNT(1) FROM c WHERE ${whereClause}`,
+          parameters,
+        };
+        const { resources: countRows } = await container.items
+          .query(countQuery)
+          .fetchAll();
+        const total = countRows[0] || 0;
+
+        const pagedQuery = {
+          query: `SELECT * FROM c WHERE ${whereClause} ORDER BY ${field} ${direction} OFFSET @offset LIMIT @limit`,
+          parameters: [
+            ...parameters,
+            { name: "@offset", value: offset },
+            { name: "@limit", value: safePageSize },
+          ],
         };
 
-        const { resources } = await container.items.query(querySpec).fetchAll();
-        return resources;
+        let resources = [];
+        try {
+          const result = await container.items.query(pagedQuery).fetchAll();
+          resources = result.resources;
+        } catch (queryError) {
+          // Fallback if OFFSET/LIMIT is not available with current account configuration
+          logger.warn(
+            `Paged query fallback for ${source}: ${
+              queryError.message || queryError
+            }`
+          );
+          const fallbackQuery = {
+            query: `SELECT * FROM c WHERE ${whereClause} ORDER BY ${field} ${direction}`,
+            parameters,
+          };
+          const result = await container.items.query(fallbackQuery).fetchAll();
+          resources = result.resources.slice(offset, offset + safePageSize);
+        }
+
+        return {
+          data: resources,
+          total,
+          page: safePage,
+          pageSize: safePageSize,
+          totalPages: Math.max(Math.ceil(total / safePageSize), 1),
+        };
       } else {
-        // Fetch from both containers with single ORDER BY
+        const includeHackerNews = !language;
+        const githubLimit = includeHackerNews
+          ? Math.floor(safeLimit / 2)
+          : safeLimit;
+        const hackerNewsLimit = includeHackerNews
+          ? Math.ceil(safeLimit / 2)
+          : 0;
+        const githubWhere = buildWhereSpec("github");
+        const hackerNewsWhere = buildWhereSpec("hackernews");
+        const githubOrder = getOrderBy("github");
+        const hackerNewsOrder = getOrderBy("hackernews");
+
         const githubQuery = this.containers.github.items
           .query({
-            query: `SELECT TOP @limit * FROM c WHERE 1=1 ${dateFilter} ORDER BY c.stars DESC`,
-            parameters: [{ name: "@limit", value: Math.floor(limit / 2) }],
+            query: `SELECT TOP @limit * FROM c WHERE ${githubWhere.whereClause} ORDER BY ${githubOrder.field} ${githubOrder.direction}`,
+            parameters: [
+              ...githubWhere.parameters,
+              { name: "@limit", value: githubLimit },
+            ],
           })
           .fetchAll();
 
-        const hackerNewsQuery = this.containers.hackerNews.items
-          .query({
-            query: `SELECT TOP @limit * FROM c ORDER BY c.points DESC`,
-            parameters: [{ name: "@limit", value: Math.ceil(limit / 2) }],
-          })
-          .fetchAll();
+        const queries = [githubQuery];
 
-        const [githubData, hackerNewsData] = await Promise.all([
-          githubQuery,
-          hackerNewsQuery,
-        ]);
+        if (includeHackerNews) {
+          queries.push(
+            this.containers.hackerNews.items
+              .query({
+                query: `SELECT TOP @limit * FROM c WHERE ${hackerNewsWhere.whereClause} ORDER BY ${hackerNewsOrder.field} ${hackerNewsOrder.direction}`,
+                parameters: [
+                  ...hackerNewsWhere.parameters,
+                  { name: "@limit", value: hackerNewsLimit },
+                ],
+              })
+              .fetchAll()
+          );
+        }
 
-        return [...githubData.resources, ...hackerNewsData.resources];
+        const [githubData, hackerNewsData] = await Promise.all(queries);
+        const combined = [
+          ...githubData.resources,
+          ...(hackerNewsData?.resources || []),
+        ];
+
+        const asTimestamp = (item) =>
+          new Date(item.createdAt || item.timestamp || 0).getTime();
+
+        const sorted = combined.sort((a, b) => {
+          if (sort === "recent") {
+            return asTimestamp(b) - asTimestamp(a);
+          }
+
+          if (sort === "stars") {
+            return (b.stars || 0) - (a.stars || 0);
+          }
+          if (sort === "stars_asc") {
+            return (a.stars || 0) - (b.stars || 0);
+          }
+
+          if (sort === "score") {
+            return (b.points || 0) - (a.points || 0);
+          }
+          if (sort === "score_asc") {
+            return (a.points || 0) - (b.points || 0);
+          }
+
+          // popularity/trending fallback
+          const aPopularity = a.source === "github" ? a.stars || 0 : a.points || 0;
+          const bPopularity = b.source === "github" ? b.stars || 0 : b.points || 0;
+          return bPopularity - aPopularity;
+        });
+
+        return sorted.slice(0, safeLimit);
       }
     } catch (error) {
       logger.error("Error fetching trending items:", error.message);
@@ -546,7 +683,16 @@ class CosmosService {
       "⚠️  Generating mock data - this should only happen in development!"
     );
 
-    const { limit = 10, source } = filters;
+    const {
+      limit = 10,
+      source,
+      sort = "popularity",
+      page = 1,
+      pageSize = 50,
+    } = filters;
+    const safePage = Math.max(parseInt(page) || 1, 1);
+    const safePageSize = Math.min(Math.max(parseInt(pageSize) || 50, 1), 100);
+    const safeLimit = parseInt(limit) || safePageSize;
     const mockItems = [];
 
     const generateGitHubItem = (i) => ({
@@ -574,7 +720,7 @@ class CosmosService {
       _isMockData: true,
     });
 
-    for (let i = 0; i < limit; i++) {
+    for (let i = 0; i < safeLimit; i++) {
       if (!source || source === "github") {
         mockItems.push(generateGitHubItem(i));
       }
@@ -582,8 +728,35 @@ class CosmosService {
         mockItems.push(generateHackerNewsItem(i));
       }
     }
+    const sorted = mockItems.sort((a, b) => {
+      if (sort === "recent") {
+        return (
+          new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+        );
+      }
+      if (sort === "stars") return (b.stars || 0) - (a.stars || 0);
+      if (sort === "stars_asc") return (a.stars || 0) - (b.stars || 0);
+      if (sort === "score") return (b.points || 0) - (a.points || 0);
+      if (sort === "score_asc") return (a.points || 0) - (b.points || 0);
 
-    return mockItems.slice(0, limit);
+      const aPopularity = a.source === "github" ? a.stars || 0 : a.points || 0;
+      const bPopularity = b.source === "github" ? b.stars || 0 : b.points || 0;
+      return bPopularity - aPopularity;
+    });
+
+    if (source === "github" || source === "hackernews") {
+      const total = sorted.length;
+      const offset = (safePage - 1) * safePageSize;
+      return {
+        data: sorted.slice(offset, offset + safePageSize),
+        total,
+        page: safePage,
+        pageSize: safePageSize,
+        totalPages: Math.max(Math.ceil(total / safePageSize), 1),
+      };
+    }
+
+    return sorted.slice(0, safeLimit);
   }
 
   /**
@@ -687,9 +860,13 @@ class CosmosService {
    */
   async getEnhancedTrendingItems(filters) {
     const analyticsMetrics = require("./analyticsMetricsService");
+    const selectedSort = filters?.sort || "popularity";
 
     // Get base trending items
-    const items = await this.getTrendingItems(filters);
+    const baseResponse = await this.getTrendingItems(filters);
+    const items = Array.isArray(baseResponse)
+      ? baseResponse
+      : baseResponse?.data || [];
 
     // Enhance each item with derived metrics
     const enhancedItems = items.map((item) => {
@@ -719,12 +896,41 @@ class CosmosService {
       return enhanced;
     });
 
-    // Sort by momentum score by default
+    // Respect requested sort with momentum as default
     const sorted = enhancedItems.sort(
-      (a, b) => b.momentum.score - a.momentum.score
+      (a, b) => {
+        if (selectedSort === "recent") {
+          const aTime = new Date(a.createdAt || a.timestamp || 0).getTime();
+          const bTime = new Date(b.createdAt || b.timestamp || 0).getTime();
+          return bTime - aTime;
+        }
+
+        if (selectedSort === "stars") {
+          return (b.stars || 0) - (a.stars || 0);
+        }
+        if (selectedSort === "stars_asc") {
+          return (a.stars || 0) - (b.stars || 0);
+        }
+
+        if (selectedSort === "score") {
+          return (b.points || 0) - (a.points || 0);
+        }
+        if (selectedSort === "score_asc") {
+          return (a.points || 0) - (b.points || 0);
+        }
+
+        return b.momentum.score - a.momentum.score;
+      }
     );
 
-    return sorted;
+    if (Array.isArray(baseResponse)) {
+      return sorted;
+    }
+
+    return {
+      ...baseResponse,
+      data: sorted,
+    };
   }
 
   // Admin: Get source statistics
