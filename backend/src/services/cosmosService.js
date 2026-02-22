@@ -161,10 +161,10 @@ class CosmosService {
       const container = this.containers[containerName];
       // Use upsert instead of create to handle duplicates
       const { resource } = await container.items.upsert(item);
-      logger.info(`Item upserted in ${containerName}:`, resource.id);
+      logger.info(`Item upserted in ${containerName}: ${resource.id}`);
       return resource;
     } catch (error) {
-      logger.error(`Error upserting item in ${containerName}:`, error.message);
+      logger.error(`Error upserting item in ${containerName}: ${error.message}`);
       throw error;
     }
   }
@@ -181,30 +181,103 @@ class CosmosService {
     try {
       const container = this.containers[containerName];
       const results = [];
-      let successCount = 0;
       let failCount = 0;
 
-      for (const item of items) {
-        try {
-          const { resource } = await container.items.upsert(item);
+      const bulkOperations = items.map((item) => ({
+        operationType: "Upsert",
+        resourceBody: item,
+        partitionKey:
+          item.partitionKey ||
+          item.source ||
+          (containerName === "github" ? "github" : "hackernews"),
+      }));
+
+      const bulkResponses = await container.items.bulk(bulkOperations);
+      const retryItems = [];
+
+      bulkResponses.forEach((response, index) => {
+        const statusCode = response.statusCode || 0;
+        const item = items[index];
+
+        if (statusCode >= 200 && statusCode < 300) {
+          results.push(response.resourceBody || item);
+          return;
+        }
+
+        if (this._isRetryableStatus(statusCode)) {
+          retryItems.push(item);
+          return;
+        }
+
+        failCount++;
+        logger.warn(
+          `Failed to upsert item ${item.id}: ${this._extractErrorMessage(
+            response
+          )}`
+        );
+      });
+
+      for (const item of retryItems) {
+        const resource = await this._upsertWithRetry(container, item, 2);
+        if (resource) {
           results.push(resource);
-          successCount++;
-        } catch (error) {
-          logger.warn(`Failed to upsert item ${item.id}:`, error.message);
+        } else {
           failCount++;
         }
       }
 
       logger.info(
-        `Batch upsert completed for ${containerName}: ${successCount} success, ${failCount} failed`
+        `Batch upsert completed for ${containerName}: ${results.length} success, ${failCount} failed`
       );
       return results;
     } catch (error) {
-      logger.error(
-        `Error in batch upsert for ${containerName}:`,
-        error.message
-      );
+      logger.error(`Error in batch upsert for ${containerName}: ${error.message}`);
       throw error;
+    }
+  }
+
+  async _upsertWithRetry(container, item, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { resource } = await container.items.upsert(item);
+        return resource;
+      } catch (error) {
+        const message = this._extractErrorMessage(error);
+        const statusCode = error?.code || error?.statusCode || 0;
+        const retryable =
+          this._isRetryableStatus(statusCode) ||
+          message.toLowerCase().includes("timeout");
+
+        if (!retryable || attempt === maxRetries) {
+          logger.warn(`Failed to upsert item ${item.id}: ${message}`);
+          return null;
+        }
+
+        await this._sleep(400 * Math.pow(2, attempt));
+      }
+    }
+
+    return null;
+  }
+
+  _isRetryableStatus(statusCode) {
+    return [408, 429, 449, 500, 503, 504].includes(statusCode);
+  }
+
+  _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  _extractErrorMessage(error) {
+    if (!error) return "Unknown error";
+    if (typeof error === "string") return error;
+    if (typeof error.message === "string") return error.message;
+    if (typeof error.body === "string") return error.body;
+    if (typeof error.error === "string") return error.error;
+    try {
+      return JSON.stringify(error);
+    } catch (_jsonError) {
+      return String(error);
     }
   }
 
