@@ -5,6 +5,7 @@ const logger = require("../utils/logger");
 class SQLService {
   constructor() {
     this.pool = null;
+    this._connecting = null;
   }
 
   async initialize() {
@@ -19,15 +20,7 @@ class SQLService {
       return;
     }
 
-    try {
-      this.pool = await sql.connect(config.sql);
-      logger.info("✅ Azure SQL Database connected successfully");
-    } catch (error) {
-      logger.error("❌ Failed to connect to Azure SQL:", error.message);
-      logger.warn("⚠️  Continuing without SQL database - using mock data");
-      // Don't throw - allow app to continue with mock data
-      this.pool = null;
-    }
+    await this._ensureConnected();
   }
 
   async getOverallAnalytics(range) {
@@ -56,16 +49,17 @@ class SQLService {
   }
 
   async getDailyMetrics(range, source) {
-    if (!this.pool) {
-      return this._getMockDailyMetrics(range, source);
+    const connected = await this._ensureConnected();
+    if (!connected) {
+      return this._getDailyMetricsFallback(range, source);
     }
 
     try {
       const days = range === "week" ? 7 : range === "month" ? 30 : 365;
 
       const query = source
-        ? `SELECT * FROM DailyMetrics WHERE source = @source AND date >= DATEADD(day, -@days, GETDATE()) ORDER BY date DESC`
-        : `SELECT * FROM DailyMetrics WHERE date >= DATEADD(day, -@days, GETDATE()) ORDER BY date DESC`;
+        ? `SELECT date, source, item_count, popularity_score FROM DailyMetrics WHERE source = @source AND date >= DATEADD(day, -@days, GETDATE()) ORDER BY date DESC`
+        : `SELECT date, source, item_count, popularity_score FROM DailyMetrics WHERE date >= DATEADD(day, -@days, GETDATE()) ORDER BY date DESC`;
 
       const request = this.pool.request().input("days", sql.Int, days);
       if (source) {
@@ -73,10 +67,13 @@ class SQLService {
       }
 
       const result = await request.query(query);
-      return result.recordset;
+      return this._normalizeDailyMetrics(result.recordset);
     } catch (error) {
-      logger.error("Error fetching daily metrics:", error.message);
-      return this._getMockDailyMetrics(range, source);
+      logger.error(`Error fetching daily metrics: ${error.message}`);
+      if (config.nodeEnv === "production") {
+        return [];
+      }
+      return this._normalizeDailyMetrics(this._getMockDailyMetrics(range, source));
     }
   }
 
@@ -283,12 +280,76 @@ class SQLService {
       metrics.push({
         date: date.toISOString().split("T")[0],
         source: source || "all",
-        itemCount: Math.floor(Math.random() * 100) + 50,
-        popularityScore: (Math.random() * 10).toFixed(2),
+        item_count: Math.floor(Math.random() * 100) + 50,
+        popularity_score: parseFloat((Math.random() * 10).toFixed(2)),
       });
     }
 
     return metrics;
+  }
+
+  _normalizeDailyMetrics(metrics = []) {
+    return (metrics || []).map((metric) => ({
+      date: metric.date,
+      source: metric.source,
+      item_count: Number(metric.item_count ?? metric.itemCount ?? 0),
+      popularity_score: Number(
+        metric.popularity_score ?? metric.popularityScore ?? 0
+      ),
+    }));
+  }
+
+  _getDailyMetricsFallback(range, source) {
+    if (config.nodeEnv === "production") {
+      // Production must never return synthetic random analytics values.
+      return [];
+    }
+    return this._normalizeDailyMetrics(this._getMockDailyMetrics(range, source));
+  }
+
+  async _ensureConnected() {
+    if (this.pool) return true;
+    if (config.sql.enabled === false) return false;
+    if (!config.sql.server || !config.sql.database) return false;
+
+    if (this._connecting) {
+      return this._connecting;
+    }
+
+    this._connecting = this._connectWithRetry();
+    const connected = await this._connecting;
+    this._connecting = null;
+    return connected;
+  }
+
+  async _connectWithRetry() {
+    const delays = [0, 1000, 2000, 4000];
+
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      if (delays[attempt] > 0) {
+        await this._sleep(delays[attempt]);
+      }
+
+      try {
+        this.pool = await sql.connect(config.sql);
+        logger.info("✅ Azure SQL Database connected successfully");
+        return true;
+      } catch (error) {
+        logger.error(
+          `❌ Failed to connect to Azure SQL (attempt ${attempt + 1}/${
+            delays.length
+          }): ${error.message}`
+        );
+      }
+    }
+
+    this.pool = null;
+    logger.warn("⚠️  Continuing without SQL database");
+    return false;
+  }
+
+  _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   _getMockSourceAnalytics(source, range) {

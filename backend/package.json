@@ -11,6 +11,8 @@
     "test-scheduler": "node src/scripts/test-scheduler.js",
     "populate-sql": "node src/scripts/populate-sql-tables.js",
     "populate-sql-simple": "node src/scripts/populate-sql-simple.js",
+    "backfill-daily-metrics": "node src/scripts/backfill-daily-metrics.js",
+    "check-daily-metrics": "node src/scripts/check-daily-metrics-consistency.js",
     "check-sql-schema": "node src/scripts/check-sql-schema.js",
     "diagnose-sql": "node src/scripts/diagnose-sql.js"
   },
