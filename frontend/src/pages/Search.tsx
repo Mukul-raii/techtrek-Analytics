@@ -87,18 +87,15 @@ export function Search() {
             {results.map(
               (result: {
                 id: string;
-                type: string;
-                title?: string;
-                repository?: string;
+                source: string;
+                title: string;
                 description: string;
+                language?: string;
                 url: string;
-                metadata: {
-                  language?: string;
-                  author: string;
-                  stars?: number;
-                  score?: number;
-                  date: string;
-                };
+                timestamp: string;
+                popularity?: number;
+                stars?: number;
+                score?: number;
               }) => (
                 <Card
                   key={result.id}
@@ -112,11 +109,11 @@ export function Search() {
                             variant="outline"
                             className="border-slate-200 bg-slate-50 text-slate-600"
                           >
-                            {result.type}
+                            {result.source}
                           </Badge>
-                          {result.metadata.language ? (
+                          {result.language ? (
                             <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                              {result.metadata.language}
+                              {result.language}
                             </Badge>
                           ) : null}
                         </div>
@@ -140,14 +137,18 @@ export function Search() {
                       </div>
 
                       <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                        <span>Author: {result.metadata.author}</span>
-                        {result.metadata.stars ? (
-                          <span>Stars: {result.metadata.stars}</span>
+                        {result.popularity ? (
+                          <span>⭐ {result.popularity.toLocaleString()}</span>
                         ) : null}
-                        {result.metadata.score ? (
-                          <span>Score: {result.metadata.score}</span>
+                        {result.stars ? (
+                          <span>Stars: {result.stars.toLocaleString()}</span>
                         ) : null}
-                        <span>{result.metadata.date}</span>
+                        {result.score ? (
+                          <span>Score: {result.score}</span>
+                        ) : null}
+                        <span>
+                          {new Date(result.timestamp).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
