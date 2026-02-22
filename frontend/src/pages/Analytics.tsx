@@ -31,9 +31,11 @@ export function Analytics() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (response as any)?.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const monthlyDailyMetrics = ((monthlyDailyResponse as any)?.data ?? []) as DailyMetric[];
+  const monthlyDailyMetrics = ((monthlyDailyResponse as any)?.data ??
+    []) as DailyMetric[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const yearlyDailyMetrics = ((yearlyDailyResponse as any)?.data ?? []) as DailyMetric[];
+  const yearlyDailyMetrics = ((yearlyDailyResponse as any)?.data ??
+    []) as DailyMetric[];
 
   // Transform API data to component format - must be before early returns
   const transformedData = useMemo(() => {
@@ -203,61 +205,6 @@ export function Analytics() {
             </div>
           </ChartCard>
         </section>
-
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <ChartCard
-            title="Monthly Growth"
-            subtitle="Repository growth trajectory"
-            empty={!transformedData.monthlyGrowth.length}
-            emptyLabel="No monthly growth data available"
-          >
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={transformedData.monthlyGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 12, fill: "#64748b" }}
-                  />
-                  <YAxis tick={{ fontSize: 12, fill: "#64748b" }} width={34} />
-                  <Tooltip />
-                  <Bar dataKey="repos" fill="#2563eb" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-
-          <ChartCard
-            title="Top Languages"
-            subtitle="Current leaders by repository count"
-          >
-            <div className="space-y-3">
-              {transformedData.topLanguages
-                .slice(0, 5)
-                .map((language: { language: string; repositories: number }) => (
-                  <div key={language.language}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">
-                        {language.language}
-                      </span>
-                      <span className="text-slate-900">
-                        {language.repositories}
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-2 rounded-full bg-blue-700"
-                        style={{
-                          width: `${Math.min(100, language.repositories)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </ChartCard>
-        </section>
-
         <ChartCard
           title="Language Statistics"
           subtitle="Detailed breakdown of language performance"
@@ -356,16 +303,20 @@ function aggregateMonthlyGrowth(metrics: DailyMetric[], monthsToShow = 6) {
   const byMonth = new Map<string, number>();
 
   metrics.forEach((metric) => {
+    // Only count GitHub repositories (not HackerNews stories)
+    if (metric.source !== "github") return;
+
     const date = new Date(metric.date);
     if (Number.isNaN(date.getTime())) return;
 
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}`;
+    const monthKey = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
     const count = metric.item_count ?? 0;
 
-    byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + count);
+    // Take the maximum value per month (latest snapshot)
+    const existing = byMonth.get(monthKey) ?? 0;
+    byMonth.set(monthKey, Math.max(existing, count));
   });
 
   return Array.from(byMonth.entries())

@@ -5,42 +5,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TrendingFilters } from "@/types/trending";
 
 interface FilterBarProps {
   filters: TrendingFilters;
   onFilterChange: (filters: Partial<TrendingFilters>) => void;
-  languages?: string[];
 }
 
-export function FilterBar({
-  filters,
-  onFilterChange,
-  languages = [],
-}: FilterBarProps) {
+export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
+  const sortOptions =
+    filters.source === "hackernews"
+      ? [
+          { value: "trending", label: "Trending" },
+          { value: "score", label: "Top Score" },
+          { value: "recent", label: "Most Recent" },
+        ]
+      : filters.source === "github"
+        ? [
+            { value: "trending", label: "Trending" },
+            { value: "stars", label: "Most Stars" },
+            { value: "recent", label: "Most Recent" },
+          ]
+        : [
+            { value: "trending", label: "Trending" },
+            { value: "recent", label: "Most Recent" },
+          ];
+
   return (
     <div className="space-y-4">
-      <div>
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Content Source
-        </label>
-        <Tabs
-          value={filters.source}
-          onValueChange={(value) =>
-            onFilterChange({ source: value as TrendingFilters["source"] })
-          }
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-3 rounded-lg bg-slate-100 p-1">
-            <TabsTrigger value="all">All Sources</TabsTrigger>
-            <TabsTrigger value="github">GitHub</TabsTrigger>
-            <TabsTrigger value="hackernews">HackerNews</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Time Range
@@ -62,32 +55,6 @@ export function FilterBar({
           </Select>
         </div>
 
-        {languages.length > 0 ? (
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Language
-            </label>
-            <Select
-              value={filters.language || "all"}
-              onValueChange={(value) =>
-                onFilterChange({ language: value === "all" ? undefined : value })
-              }
-            >
-              <SelectTrigger className="h-10 border-slate-200 bg-slate-50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Languages</SelectItem>
-                {languages.map((lang) => (
-                  <SelectItem key={lang} value={lang}>
-                    {lang}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
-
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Sort By
@@ -102,10 +69,11 @@ export function FilterBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="trending">Trending</SelectItem>
-              <SelectItem value="stars">Most Stars</SelectItem>
-              <SelectItem value="score">Top Score</SelectItem>
-              <SelectItem value="recent">Most Recent</SelectItem>
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

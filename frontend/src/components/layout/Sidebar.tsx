@@ -4,7 +4,8 @@ import {
   LayoutGrid,
   Search,
   CheckCircle2,
-  Flame,
+  Package,
+  Newspaper,
 } from "lucide-react";
 import type { ShellSidebarSection } from "@/types/uiTheme";
 
@@ -23,9 +24,14 @@ const sections: ShellSidebarSection[] = [
         icon: <LayoutGrid className="h-4 w-4" />,
       },
       {
-        label: "Trending",
-        route: "/trending",
-        icon: <Flame className="h-4 w-4" />,
+        label: "Repositories",
+        route: "/repositories",
+        icon: <Package className="h-4 w-4" />,
+      },
+      {
+        label: "Stories",
+        route: "/stories",
+        icon: <Newspaper className="h-4 w-4" />,
       },
       {
         label: "Analytics",

@@ -45,6 +45,29 @@ export function TrendingPageSkeleton() {
   );
 }
 
+export function DataListingPageSkeleton() {
+  return (
+    <div className="space-y-4">
+      <PanelSkeleton className="h-20" />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="space-y-4 xl:col-span-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <PanelSkeleton key={idx} className="h-56" />
+            ))}
+          </div>
+          <PanelSkeleton className="h-20" />
+        </div>
+
+        <div className="xl:col-span-4">
+          <PanelSkeleton className="h-[34rem]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AnalyticsPageSkeleton() {
   return (
     <div className="space-y-4">

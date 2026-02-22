@@ -19,10 +19,15 @@ const pageConfig: Record<string, Omit<ShellHeaderProps, "user">> = {
       "Overview of trending tech data, GitHub statistics, and HackerNews insights",
     searchPlaceholder: "Search here...",
   },
-  "/trending": {
-    title: "Trending",
-    subtitle: "Discover the most popular repositories and stories right now",
-    searchPlaceholder: "Search topics or repositories...",
+  "/repositories": {
+    title: "Repositories",
+    subtitle: "Browse all GitHub repositories with ranking and filters",
+    searchPlaceholder: "Search repositories...",
+  },
+  "/stories": {
+    title: "Stories",
+    subtitle: "Browse all HackerNews stories with ranking and filters",
+    searchPlaceholder: "Search stories...",
   },
   "/analytics": {
     title: "Analytics",
