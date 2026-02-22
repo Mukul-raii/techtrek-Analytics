@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useAnalytics } from "@/hooks/queries/useAnalytics";
+import { useAnalytics, useDailyAnalytics } from "@/hooks/queries/useAnalytics";
 import { KpiStrip } from "@/components/dashboard/KpiStrip";
 import { TrendLinePanel } from "@/components/dashboard/TrendLinePanel";
 import { EfficiencyBarPanel } from "@/components/dashboard/EfficiencyBarPanel";
@@ -15,11 +15,16 @@ export function Dashboard() {
   const { data: analyticsResponse, isLoading: analyticsLoading } = useAnalytics(
     { range: timeRange }
   );
+  const { data: dailyResponse, isLoading: dailyLoading } = useDailyAnalytics({
+    range: "week",
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const analyticsData = (analyticsResponse as any)?.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dailyMetrics = ((dailyResponse as any)?.data ?? []) as DailyMetric[];
 
-  const isLoading = analyticsLoading;
+  const isLoading = analyticsLoading || dailyLoading;
 
   // Transform analytics data to match dashboard format
   const metrics = useMemo(() => {
@@ -72,22 +77,9 @@ export function Dashboard() {
     );
   }, [analyticsData]);
 
-  // Generate static mock activity data
   const activityData = useMemo(() => {
-    const baseRepos = 120;
-    const baseStories = 95;
-    const days = 7;
-    const today = new Date();
-    return Array.from({ length: days }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (days - 1 - i));
-      return {
-        date: date.toISOString().split("T")[0],
-        repositories: baseRepos + i * 5,
-        stories: baseStories + i * 3,
-      };
-    });
-  }, []);
+    return transformDailyMetrics(dailyMetrics);
+  }, [dailyMetrics]);
 
   const kpis = useMemo(() => {
     const totalRepos = metrics?.totalRepositories.value ?? 0;
@@ -192,4 +184,42 @@ export function Dashboard() {
       )}
     </MainLayout>
   );
+}
+
+interface DailyMetric {
+  date: string;
+  source?: string;
+  itemCount?: number;
+  item_count?: number;
+}
+
+function transformDailyMetrics(metrics: DailyMetric[]) {
+  if (!metrics.length) return [];
+
+  const byDate = new Map<string, { repositories: number; stories: number }>();
+
+  metrics.forEach((metric) => {
+    const date = String(metric.date).split("T")[0];
+    const count = metric.itemCount ?? metric.item_count ?? 0;
+    const existing = byDate.get(date) ?? { repositories: 0, stories: 0 };
+
+    if (metric.source === "github") {
+      existing.repositories += count;
+    } else if (metric.source === "hackernews") {
+      existing.stories += count;
+    } else {
+      // If source is unavailable, keep chart useful by plotting totals as repository activity.
+      existing.repositories += count;
+    }
+
+    byDate.set(date, existing);
+  });
+
+  return Array.from(byDate.entries())
+    .map(([date, values]) => ({
+      date,
+      repositories: values.repositories,
+      stories: values.stories,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

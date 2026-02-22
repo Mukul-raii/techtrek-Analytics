@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ChartCard } from "@/components/common/ChartCard";
 import { DataTable } from "@/components/common/DataTable";
 import { AnalyticsPageSkeleton } from "@/components/common/PageSkeletons";
-import { useAnalytics } from "@/hooks/queries/useAnalytics";
+import { useAnalytics, useDailyAnalytics } from "@/hooks/queries/useAnalytics";
 import {
   Bar,
   BarChart,
@@ -23,8 +23,17 @@ const pieColors = ["#2563eb", "#60a5fa", "#93c5fd", "#bfdbfe", "#1d4ed8"];
 
 export function Analytics() {
   const { data: response, isLoading, error } = useAnalytics({ range: "month" });
+  const { data: monthlyDailyResponse, isLoading: monthlyDailyLoading } =
+    useDailyAnalytics({ range: "month" });
+  const { data: yearlyDailyResponse, isLoading: yearlyDailyLoading } =
+    useDailyAnalytics({ range: "year" });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (response as any)?.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const monthlyDailyMetrics = ((monthlyDailyResponse as any)?.data ?? []) as DailyMetric[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const yearlyDailyMetrics = ((yearlyDailyResponse as any)?.data ?? []) as DailyMetric[];
 
   // Transform API data to component format - must be before early returns
   const transformedData = useMemo(() => {
@@ -35,25 +44,8 @@ export function Analytics() {
     const totalStories = data.hackerNewsStats?.totalStories || 0;
     const avgStars = data.githubStats?.avgStars || 0;
 
-    // Static month labels to avoid Date.now() impurity
-    const monthLabels = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
-
-    // Create mock activity data (in real scenario, would come from daily metrics API)
-    const activityData = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return {
-        date: date.toISOString().split("T")[0],
-        repositories: Math.floor(totalRepos / 7) + i * 5,
-        stories: Math.floor(totalStories / 7) + i * 3,
-      };
-    });
-
-    // Create mock monthly growth data
-    const monthlyGrowth = monthLabels.map((month, i) => ({
-      month,
-      repos: Math.floor(totalRepos * (0.7 + i * 0.05)),
-    }));
+    const activityData = transformDailyMetrics(monthlyDailyMetrics);
+    const monthlyGrowth = aggregateMonthlyGrowth(yearlyDailyMetrics, 6);
 
     return {
       ...data,
@@ -71,9 +63,9 @@ export function Analytics() {
       totalStories,
       avgStars,
     };
-  }, [data]);
+  }, [data, monthlyDailyMetrics, yearlyDailyMetrics]);
 
-  if (isLoading) {
+  if (isLoading || monthlyDailyLoading || yearlyDailyLoading) {
     return (
       <MainLayout>
         <AnalyticsPageSkeleton />
@@ -296,4 +288,73 @@ export function Analytics() {
       </div>
     </MainLayout>
   );
+}
+
+interface DailyMetric {
+  date: string;
+  source?: string;
+  itemCount?: number;
+  item_count?: number;
+}
+
+function transformDailyMetrics(metrics: DailyMetric[]) {
+  if (!metrics.length) return [];
+
+  const byDate = new Map<string, { repositories: number; stories: number }>();
+
+  metrics.forEach((metric) => {
+    const date = String(metric.date).split("T")[0];
+    const count = metric.itemCount ?? metric.item_count ?? 0;
+    const existing = byDate.get(date) ?? { repositories: 0, stories: 0 };
+
+    if (metric.source === "github") {
+      existing.repositories += count;
+    } else if (metric.source === "hackernews") {
+      existing.stories += count;
+    } else {
+      existing.repositories += count;
+    }
+
+    byDate.set(date, existing);
+  });
+
+  return Array.from(byDate.entries())
+    .map(([date, values]) => ({
+      date,
+      repositories: values.repositories,
+      stories: values.stories,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function aggregateMonthlyGrowth(metrics: DailyMetric[], monthsToShow = 6) {
+  if (!metrics.length) return [];
+
+  const byMonth = new Map<string, number>();
+
+  metrics.forEach((metric) => {
+    const date = new Date(metric.date);
+    if (Number.isNaN(date.getTime())) return;
+
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
+    const count = metric.itemCount ?? metric.item_count ?? 0;
+
+    byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + count);
+  });
+
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-monthsToShow)
+    .map(([monthKey, repos]) => {
+      const [year, month] = monthKey.split("-").map(Number);
+      const monthDate = new Date(year, month - 1, 1);
+
+      return {
+        month: monthDate.toLocaleDateString("en-US", { month: "short" }),
+        repos,
+      };
+    });
 }

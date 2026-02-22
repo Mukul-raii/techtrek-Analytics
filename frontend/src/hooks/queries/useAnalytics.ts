@@ -33,6 +33,8 @@ export function useAnalytics(params: AnalyticsParams = {}) {
 interface DailyAnalyticsParams {
   metric?: string;
   date?: string;
+  range?: "week" | "month" | "year";
+  source?: "github" | "hackernews";
 }
 
 export function useDailyAnalytics(params: DailyAnalyticsParams = {}) {
