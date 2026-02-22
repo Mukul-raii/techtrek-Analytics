@@ -5,8 +5,6 @@ import { DataTable } from "@/components/common/DataTable";
 import { AnalyticsPageSkeleton } from "@/components/common/PageSkeletons";
 import { useAnalytics, useDailyAnalytics } from "@/hooks/queries/useAnalytics";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   LineChart,
