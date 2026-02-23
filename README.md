@@ -38,6 +38,7 @@
 **TechTrek Analytics** is a modern, full-stack analytics platform designed to help developers and organizations track technology trends, monitor repository health, and make data-driven decisions. The platform ingests data from multiple sources (GitHub, HackerNews) and provides real-time insights through advanced metrics and visualizations.
 
 ### Key Capabilities
+
 - 📊 **Real-time Analytics Dashboard** - Track momentum, engagement, and ecosystem health
 - 🔥 **Trending Detection** - AI-powered momentum scoring and velocity tracking
 - 🔍 **Advanced Search** - Fast, filtered search across repositories and topics
@@ -48,197 +49,48 @@
 
 ## 🏗️ Architecture
 
-### System Architecture Diagram
+<div align="center">
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     TECHTREK ANALYTICS PLATFORM                     │
-└─────────────────────────────────────────────────────────────────────┘
+![TechTrek Analytics Architecture](https://res.cloudinary.com/dmvzjbgwp/image/upload/v1771825723/b2cbf887-1357-46d3-b996-1c23f5d47b5a.png)
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                            CLIENT LAYER                             │
-│                   React 19 + TypeScript + Vite                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Dashboard  │  Analytics  │  Trending  │  Search                   │
-│                                                                     │
-│  React Router + Zustand State Management                           │
-│                                                                     │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-                               │ REST API
-                               │
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                         API GATEWAY LAYER                           │
-│                       Express.js + Middleware                       │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  /api/analytics  │  /api/trending  │  /api/search  │  /api/health  │
-│                                                                     │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                          SERVICE LAYER                              │
-│              Analytics, Trending, Search Services                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  • Ecosystem Health  │  • Momentum Scoring  │  • Filtered Search   │
-│  • Growth Analysis   │  • Velocity Tracking │  • Multi-field       │
-│                                                                     │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                         DATABASE LAYER                              │
-│                      Azure Cosmos DB (NoSQL)                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Collections: repositories  │  trending  │  analytics               │
-│  • Partitioned by language                                         │
-│  • Indexed queries for fast search                                 │
-│                                                                     │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                      DATA INGESTION LAYER                           │
-│                  GitHub API  │  HackerNews API                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                    Data Processing & Enrichment                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+_System architecture showing data flow from external APIs through processing layers to the frontend_
 
-### Data Flow Architecture
-
-```
-┌──────────────┐
-│  Data Source │  (GitHub API, HackerNews API)
-└──────┬───────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────┐
-│  INGESTION PIPELINE                                         │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌─────────┐ │
-│  │ Validate │ → │ Transform│ → │ Enrich   │ → │  Store  │ │
-│  └──────────┘   └──────────┘   └──────────┘   └─────────┘ │
-└───────────────────────────────────┬─────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  STORAGE LAYER                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  CosmosDB    │  │  SQL DB      │  │ Search Index │      │
-│  │  (Primary)   │  │  (Relations) │  │  (Queries)   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└───────────────────────────────────┬─────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  ANALYTICS ENGINE                                           │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐    │
-│  │  Momentum    │   │  Engagement  │   │   Health     │    │
-│  │  Calculator  │   │  Analyzer    │   │   Monitor    │    │
-│  └──────────────┘   └──────────────┘   └──────────────┘    │
-│                                                             │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐    │
-│  │  Freshness   │   │  Diversity   │   │   Growth     │    │
-│  │  Index       │   │  Index       │   │   Classifier │    │
-│  └──────────────┘   └──────────────┘   └──────────────┘    │
-└───────────────────────────────────┬─────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  REST API LAYER                                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  /analytics  │  │  /trending   │  │   /search    │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└───────────────────────────────────┬─────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  PRESENTATION LAYER                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ KPI Cards    │  │ Charts       │  │ Tables       │      │
-│  │ • Momentum   │  │ • Line       │  │ • Trending   │      │
-│  │ • Freshness  │  │ • Scatter    │  │ • Languages  │      │
-│  │ • Engagement │  │ • Bar        │  │ • Search     │      │
-│  │ • Health     │  │ • Gauge      │  │ • Velocity   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Component Architecture
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    FRONTEND COMPONENTS                       │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Pages/                    Components/ui/                   │
-│  ├── Dashboard.tsx         ├── MomentumBadge.tsx           │
-│  ├── Analytics.tsx         ├── HealthGauge.tsx             │
-│  ├── Trending.tsx          ├── PercentileBadge.tsx         │
-│  └── Search.tsx            └── Charts/                     │
-│                                                              │
-│  Hooks/                    Services/                        │
-│  ├── useEnhancedMetrics    ├── analyticsService.ts         │
-│  ├── useEnhancedTrending   ├── trendingService.ts          │
-│  └── useRealGrowthMetrics  └── searchService.ts            │
-│                                                              │
-│  Store/ (Zustand)          Types/                           │
-│  ├── analyticsStore.ts     └── enhancedAnalytics.ts        │
-│  └── appStore.ts                                            │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────┐
-│                     BACKEND SERVICES                         │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Controllers/              Services/                         │
-│  ├── analyticsController   ├── cosmosService               │
-│  ├── trendingController    ├── sqlService                  │
-│  └── searchController      ├── searchService               │
-│                            ├── ingestionService            │
-│  Routes/                   ├── analyticsMetricsService     │
-│  ├── analytics.routes      └── schedulerService            │
-│  ├── trending.routes                                        │
-│  └── search.routes         Utils/                           │
-│                            ├── dbClient.js                  │
-│  Middleware/               ├── logger.js                    │
-│  ├── errorHandler          └── validators.js               │
-│  └── notFound                                               │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-```
+</div>
 
 ---
 
 ## ✨ Key Features
 
 ### 🎯 Analytics Dashboard
+
 - **Momentum Tracking**: Real-time calculation of trending velocity and acceleration
 - **Freshness Index**: Percentage of content newer than 7 days
 - **Engagement Metrics**: Interaction rates across GitHub (forks/stars) and HackerNews (comments/points)
 - **Health Score**: Composite ecosystem health with 4-component breakdown
 
 ### 🔥 Trending Intelligence
+
 - **Momentum Scoring**: Advanced algorithm combining velocity, acceleration, recency, and engagement
 - **Smart Badges**: 5-tier classification (🔥 Explosive, ⚡ Rising, 📈 Steady, 💎 Solid, ⚠️ Cooling)
 - **Velocity Leaders**: Top 3 items with highest growth rates
 - **Virality Index**: HackerNews-specific viral content detection
 
 ### 📊 Growth Analytics
+
 - **Period Comparisons**: Real-time month-over-month and week-over-week growth
 - **Language Classification**: Leaders, Challengers, Established, and Declining languages
 - **Growth Matrix**: Visual scatter plot of popularity vs. growth rate
 - **Language Diversity**: Shannon entropy-based diversity index
 
 ### 🔍 Advanced Search
+
 - **Multi-Source Search**: GitHub repositories and HackerNews stories
 - **Smart Filters**: Language, source, date range, and engagement filters
 - **Relevance Scoring**: AI-powered result ranking
 - **Percentile Rankings**: Show how items rank against the dataset
 
 ### 📈 Visualizations
+
 - **Interactive Charts**: Line, bar, scatter, and gauge charts
 - **Real-time Updates**: Live data refresh without page reload
 - **Responsive Design**: Mobile-first, works on all screen sizes
@@ -249,30 +101,33 @@
 ## 🛠️ Tech Stack
 
 ### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **React** | 19.2.x | UI framework with modern features |
-| **TypeScript** | 5.x | Type safety and developer experience |
-| **Vite** | 6.x | Lightning-fast build tool |
-| **Tailwind CSS** | 4.x | Utility-first styling |
-| **React Router** | 7.x | Client-side routing |
-| **Zustand** | 4.x | Lightweight state management |
-| **Lucide React** | - | Icon library |
-| **Radix UI** | - | Accessible component primitives |
-| **Sonner** | - | Toast notifications |
+
+| Technology       | Version | Purpose                              |
+| ---------------- | ------- | ------------------------------------ |
+| **React**        | 19.2.x  | UI framework with modern features    |
+| **TypeScript**   | 5.x     | Type safety and developer experience |
+| **Vite**         | 6.x     | Lightning-fast build tool            |
+| **Tailwind CSS** | 4.x     | Utility-first styling                |
+| **React Router** | 7.x     | Client-side routing                  |
+| **Zustand**      | 4.x     | Lightweight state management         |
+| **Lucide React** | -       | Icon library                         |
+| **Radix UI**     | -       | Accessible component primitives      |
+| **Sonner**       | -       | Toast notifications                  |
 
 ### Backend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Node.js** | 18.x | JavaScript runtime |
-| **Express.js** | 4.x | Web application framework |
-| **Azure CosmosDB** | 4.9.x | NoSQL database for documents |
-| **SQL** | - | Relational data storage |
-| **Azure Cognitive Search** | 12.x | Full-text search service |
-| **Axios** | 1.13.x | HTTP client for external APIs |
-| **dotenv** | 17.x | Environment configuration |
+
+| Technology                 | Version | Purpose                       |
+| -------------------------- | ------- | ----------------------------- |
+| **Node.js**                | 18.x    | JavaScript runtime            |
+| **Express.js**             | 4.x     | Web application framework     |
+| **Azure CosmosDB**         | 4.9.x   | NoSQL database for documents  |
+| **SQL**                    | -       | Relational data storage       |
+| **Azure Cognitive Search** | 12.x    | Full-text search service      |
+| **Axios**                  | 1.13.x  | HTTP client for external APIs |
+| **dotenv**                 | 17.x    | Environment configuration     |
 
 ### DevOps & Deployment
+
 - **Vercel** - Frontend and serverless functions hosting
 - **Azure** - Database and search services
 - **Git** - Version control
@@ -357,6 +212,7 @@ techtrek-analytics/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** >= 18.x
 - **npm** >= 9.x
 - **Azure Account** (for CosmosDB and Cognitive Search)
@@ -365,12 +221,14 @@ techtrek-analytics/
 ### Installation
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/your-github-profile/techtrek-analytics.git
 cd techtrek-analytics
 ```
 
 2. **Backend Setup**
+
 ```bash
 cd backend
 npm install
@@ -381,6 +239,7 @@ cp .env.example .env
 ```
 
 3. **Frontend Setup**
+
 ```bash
 cd frontend
 npm install
@@ -393,6 +252,7 @@ cp .env.example .env
 4. **Environment Variables**
 
 **Backend** (`.env`):
+
 ```env
 PORT=3000
 NODE_ENV=development
@@ -419,6 +279,7 @@ GITHUB_TOKEN=your-github-token
 ```
 
 **Frontend** (`.env`):
+
 ```env
 VITE_API_BASE_URL=http://localhost:3000
 ```
@@ -436,6 +297,7 @@ npm run dev
 ```
 
 6. **Access the Application**
+
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3000
 - Health Check: http://localhost:3000/api/health
@@ -447,15 +309,18 @@ npm run dev
 ### Analytics Endpoints
 
 #### Get Enhanced Analytics
+
 ```http
 GET /api/analytics?range=month&compare=true
 ```
 
 **Query Parameters:**
+
 - `range` (optional): `week`, `month`, `quarter`, `year` (default: `month`)
 - `compare` (optional): `true` to include period comparison (default: `false`)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -510,11 +375,13 @@ GET /api/analytics?range=month&compare=true
 ### Trending Endpoints
 
 #### Get Enhanced Trending Items
+
 ```http
 GET /api/trending?limit=20&enhanced=true&source=github
 ```
 
 **Query Parameters:**
+
 - `limit` (optional): Number of items (default: `50`)
 - `enhanced` (optional): Include momentum metrics (default: `true`)
 - `source` (optional): `github`, `hackernews`, or omit for all
@@ -523,6 +390,7 @@ GET /api/trending?limit=20&enhanced=true&source=github
 - `minPoints` (optional): Minimum points (HackerNews)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -561,11 +429,13 @@ GET /api/trending?limit=20&enhanced=true&source=github
 ### Search Endpoints
 
 #### Search Items
+
 ```http
 GET /api/search?query=machine+learning&source=github&language=Python
 ```
 
 **Query Parameters:**
+
 - `query` (required): Search term
 - `source` (optional): `github` or `hackernews`
 - `language` (optional): Programming language filter
@@ -578,6 +448,7 @@ GET /api/search?query=machine+learning&source=github&language=Python
 ### Metrics Implementation
 
 #### 1. Momentum Score (0-100)
+
 Composite metric combining velocity, acceleration, recency, and engagement:
 
 ```javascript
@@ -591,6 +462,7 @@ Where:
 ```
 
 **Badge Assignment:**
+
 - 🔥 **Explosive** (80-100): Viral growth
 - ⚡ **Rising** (60-79): Strong momentum
 - 📈 **Steady** (40-59): Consistent growth
@@ -598,16 +470,18 @@ Where:
 - ⚠️ **Cooling** (0-19): Declining interest
 
 #### 2. Engagement Rate
+
 Source-specific interaction metrics:
 
 - **GitHub**: `(forks / stars) × 100`
 - **HackerNews**: `comments / points`
 
 #### 3. Ecosystem Health Score (0-100)
+
 Weighted composite of 4 components:
 
 ```javascript
-healthScore = 
+healthScore =
   activityRate × 40% +
   avgEngagement × 30% +
   discussionQuality × 20% +
@@ -615,6 +489,7 @@ healthScore =
 ```
 
 #### 4. Content Freshness Index (0-100)
+
 Percentage of items added within the last 7 days:
 
 ```javascript
@@ -622,6 +497,7 @@ freshnessIndex = (itemsNewerThan7Days / totalItems) × 100
 ```
 
 #### 5. Language Diversity Index (0-100)
+
 Shannon entropy-based calculation:
 
 ```javascript
@@ -632,6 +508,7 @@ Where p[i] = proportion of language i
 #### 6. Language Growth Classification
 
 **Categories:**
+
 - **Leaders** (>100 repos, >15% growth): TypeScript, Python, Rust
 - **Challengers** (50-100 repos, >20% growth): Go, Zig, Swift
 - **Established** (>100 repos, <15% growth): JavaScript, Java
@@ -644,24 +521,28 @@ Where p[i] = proportion of language i
 ### Production Deployment (Vercel)
 
 1. **Backend Deployment**
+
 ```bash
 cd backend
 vercel --prod
 ```
 
 2. **Frontend Deployment**
+
 ```bash
 cd frontend
 vercel --prod
 ```
 
 ### Environment Setup
+
 - Configure environment variables in Vercel dashboard
 - Set up Azure CosmosDB and Cognitive Search instances
 - Configure CORS for production domain
 - Enable rate limiting and security middleware
 
 ### Performance Optimization
+
 - ✅ API response caching
 - ✅ Database query optimization
 - ✅ CDN for static assets
@@ -702,24 +583,28 @@ npm run lint
 ## 🎓 Learning Outcomes
 
 ### Backend Architecture
+
 - Designed scalable microservices-oriented architecture
 - Implemented complex analytics algorithms
 - Mastered Azure CosmosDB partitioning and indexing
 - Built efficient data ingestion pipelines
 
 ### Frontend Development
+
 - Advanced React patterns with TypeScript
 - Custom hooks for complex state management
 - Performance optimization techniques
 - Accessible UI component design
 
 ### Data Visualization
+
 - Interactive chart implementations
 - Real-time data updates
 - Responsive design patterns
 - Color-blind friendly palettes
 
 ### DevOps & Deployment
+
 - Serverless architecture on Vercel
 - CI/CD pipeline configuration
 - Environment management
@@ -730,36 +615,42 @@ npm run lint
 ## 🎯 Roadmap
 
 ### Phase 1: Core Infrastructure ✅ Complete
+
 - [x] Backend API with Express.js
 - [x] CosmosDB integration
 - [x] Analytics metrics service
 - [x] Enhanced API endpoints
 
 ### Phase 2: Frontend Foundation ✅ Complete
+
 - [x] React + TypeScript setup
 - [x] Type definitions
 - [x] Custom hooks
 - [x] UI components
 
 ### Phase 3: Dashboard Integration 🔄 In Progress (30%)
+
 - [x] useEnhancedMetrics hook
 - [ ] Update Dashboard KPIs
 - [ ] Velocity leaders display
 - [ ] Enhanced charts
 
 ### Phase 4: Analytics Page 🔄 Planned
+
 - [ ] Real growth calculations
 - [ ] Health score visualization
 - [ ] Language growth matrix
 - [ ] Emerging topics section
 
 ### Phase 5: Trending & Search 🔄 Planned
+
 - [ ] Momentum badges integration
 - [ ] Percentile rankings
 - [ ] Enhanced search results
 - [ ] Related searches
 
 ### Phase 6: Advanced Features 🔮 Future
+
 - [ ] Historical data tracking
 - [ ] Predictive analytics
 - [ ] Custom metric builder
@@ -780,6 +671,7 @@ Contributions are welcome! Please follow these steps:
 5. Open a Pull Request
 
 ### Development Guidelines
+
 - Write TypeScript for new frontend code
 - Follow existing code style and conventions
 - Add tests for new features
@@ -792,11 +684,12 @@ Contributions are welcome! Please follow these steps:
 
 1. **Historical Data**: Period comparisons use estimated data (90% of current)
    - **Status**: Requires time-series database implementation
-   
 2. **24h Growth Rates**: Calculated from estimated velocity
+
    - **Status**: Needs daily snapshot storage
 
 3. **Discussion Quality**: Returns mock score
+
    - **Status**: Requires NLP analysis implementation
 
 4. **Percentile Rankings**: Calculated but not yet displayed in all views
@@ -813,6 +706,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **Full Stack Developer**
+
 - **Role**: Solo Developer
 - **Timeline**: Ongoing (2026)
 - **Status**: In Development
@@ -831,6 +725,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 For questions, issues, or feature requests:
+
 - 📧 Open an issue on GitHub
 - 💬 Check existing documentation
 - 🔍 Review [ANALYTICS_RECOMMENDATIONS.md](./ANALYTICS_RECOMMENDATIONS.md)
