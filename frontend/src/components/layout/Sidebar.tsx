@@ -79,7 +79,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <CheckCircle2 className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-lg font-semibold text-slate-900">TechPulse</p>
+              <p className="text-lg font-semibold text-slate-900">TechTrek</p>
               <p className="text-xs text-slate-500">Analytics</p>
             </div>
           </div>
